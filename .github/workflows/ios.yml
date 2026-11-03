@@ -1,0 +1,43 @@
+# Builds the iPhone app on one of GitHub's Macs and keeps the result as LiquidCloud.ipa (Actions > the run >
+# Artifacts). The .ipa is unsigned: Sideloadly or AltStore signs it with your Apple ID when installing.
+name: iPhone app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build the theme for the app
+        run: node ios/build-theme.js
+
+      - name: Make the Xcode project
+        run: |
+          brew install xcodegen
+          cd ios && xcodegen generate
+
+      - name: Build the app
+        run: |
+          xcodebuild -project ios/LiquidCloud.xcodeproj -scheme LiquidCloud -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
+      - name: Pack it as an .ipa
+        run: |
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/LiquidCloud.app Payload/
+          zip -qry LiquidCloud.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LiquidCloud-ipa
+          path: LiquidCloud.ipa

@@ -1,0 +1,316 @@
+/* Same look as the SoundCloud script's lyrics: SF Pro Display, a white gradient sweeping through each
+   word as it is sung, the word lifting and glowing, backing vocals smaller underneath. */
+
+:root {
+    --fs: 34px;
+    --weight: 600;
+    --align: center;
+    --glow: 50;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    user-select: none;
+    cursor: default;
+}
+
+/* unlocked: the whole window drags (Windows handles the move), except the resize grip */
+body.unlocked {
+    -webkit-app-region: drag;
+}
+
+#frame {
+    position: absolute;
+    inset: 6px;
+    border-radius: 16px;
+    transition: opacity 0.35s ease, background-color 0.3s ease, outline-color 0.3s ease;
+    outline: 1.5px dashed transparent;
+    outline-offset: -1px;
+}
+
+body.unlocked #frame {
+    outline-color: rgba(255, 255, 255, 0.45);
+    background-color: rgba(0, 0, 0, 0.22);
+}
+
+body[data-backdrop="panel"] #frame {
+    background-color: rgba(12, 12, 14, 0.62);
+}
+
+body[data-backdrop="panel"].unlocked #frame {
+    background-color: rgba(12, 12, 14, 0.7);
+}
+
+/* locked, with the mouse over it: get out of the way */
+body.hovered #frame {
+    opacity: 0.1;
+}
+
+body.hidden-lyrics #frame {
+    opacity: 0;
+}
+
+/* now playing: cover, title and artist, the whole of the now-playing overlay (overlay.html?part=info) */
+#info {
+    display: none;
+    position: absolute;
+    inset: 0 14px;
+    align-items: center;
+    gap: 12px;
+    font-family: "SF Pro Display", "Inter", "Segoe UI", sans-serif;
+    transition: opacity 0.4s ease;
+}
+
+body[data-part="info"].has-info #info {
+    display: flex;
+}
+
+/* the other overlay's parts */
+body[data-part="info"] #view,
+body[data-part="lyrics"] #info {
+    display: none;
+}
+
+body[data-part="info"] #msg {
+    font-size: 13px;
+}
+
+body.idle #info {
+    opacity: 0;
+}
+
+#cover {
+    flex: none;
+    width: calc(var(--cover) * 1px);
+    height: calc(var(--cover) * 1px);
+    border-radius: calc(var(--cover) * 0.14px);
+    object-fit: cover;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+body.no-cover #cover {
+    display: none;
+}
+
+#meta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.2;
+}
+
+#title,
+#artist {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#title {
+    font-size: calc(max(14, var(--cover) * 0.34) * 1px);
+    font-weight: 650;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+#artist {
+    font-size: calc(max(12, var(--cover) * 0.27) * 1px);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+body.no-cover #title {
+    font-size: 15px;
+}
+
+body.no-cover #artist {
+    font-size: 13px;
+}
+
+body.no-title #title,
+body.no-artist #artist {
+    display: none;
+}
+
+body[data-backdrop="shadow"] #info {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+}
+
+/* the lyrics: a column of every line, slid up so the line being sung sits in the middle */
+#view {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    transition: opacity 0.4s ease;
+    /* lines leaving the top or bottom fade out instead of being cut off */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 calc(var(--fs) * 0.8), #000 calc(100% - var(--fs) * 0.8), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 calc(var(--fs) * 0.8), #000 calc(100% - var(--fs) * 0.8), transparent 100%);
+}
+
+body.idle #view,
+body.no-lyrics #view {
+    opacity: 0;
+}
+
+/* the aura behind the lyrics (aura.js) */
+#aura {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#column {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    padding: 0 28px;
+    transition: transform 0.65s cubic-bezier(0.2, 0.9, 0.25, 1);
+    will-change: transform;
+}
+
+body[data-backdrop="shadow"] #column {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.55));
+}
+
+.line {
+    margin: 0 0 calc(var(--fs) * 0.35);
+    font-family: "SF Pro Display", "Inter", -apple-system, "Segoe UI", sans-serif;
+    font-size: var(--fs);
+    font-weight: var(--weight);
+    font-kerning: normal;
+    font-synthesis: none;
+    line-height: 1.2;
+    text-align: var(--align);
+    color: rgba(255, 255, 255, 0.5);
+    transform: scale(0.955);
+    transform-origin: 50% 50%;
+    opacity: 0;
+    filter: blur(calc(min(var(--d, 0), 6) * 0.6px));
+    transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.25, 1), filter 0.6s ease, opacity 0.45s ease, color 0.35s ease;
+}
+
+body[data-align="left"] .line {
+    transform-origin: 0 50%;
+}
+
+body[data-align="right"] .line {
+    transform-origin: 100% 50%;
+}
+
+/* a second singer: the other side when the lyrics are left- or right-aligned */
+body[data-align="left"] .line.right {
+    text-align: right;
+    transform-origin: 100% 50%;
+}
+
+body[data-align="right"] .line.right {
+    text-align: left;
+    transform-origin: 0 50%;
+}
+
+.line.active {
+    transform: none;
+    filter: none;
+}
+
+.line.credit {
+    font-size: calc(var(--fs) * 0.38);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.w {
+    display: inline-block;
+    white-space: nowrap;
+    transform-origin: 50% 85%;
+}
+
+/* syllables of one word never split across rows */
+.word {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* the line being sung: each word is filled by a white-to-dim gradient whose edge sits at --p (0-100),
+   and is lifted, scaled and lit by --y, --s and --g, all set every frame by overlay.js */
+.line.active .w {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background-image: linear-gradient(90deg, #ffffff calc(var(--p, 0) * 1.18% - 18%), rgba(255, 255, 255, 0.42) calc(var(--p, 0) * 1.18%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    transform: translateY(calc(var(--y, 0) * 1px)) scale(var(--s, 1));
+    filter: drop-shadow(0 0 calc(var(--g, 0) * var(--glow) * 0.26px) rgba(255, 255, 255, calc(var(--g, 0) * var(--glow) / 95)));
+    will-change: transform, filter;
+}
+
+/* lines without word timing: the whole line lights up */
+.line.active.plain {
+    color: #ffffff;
+}
+
+/* backing vocals: a smaller line under the lead */
+.bg {
+    display: block;
+    margin-top: 0.18em;
+    font-size: 0.6em;
+    line-height: 1.25;
+}
+
+/* status text ("Looking for lyrics…"), only while unlocked */
+#msg,
+#hint {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    font-family: "SF Pro Display", "Inter", "Segoe UI", sans-serif;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+#msg {
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+#hint {
+    bottom: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+body.unlocked #hint,
+body.unlocked.idle #msg,
+body.unlocked.no-lyrics #msg {
+    opacity: 1;
+}
+
+#grip {
+    display: none;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22px;
+    height: 22px;
+    cursor: nwse-resize;
+    -webkit-app-region: no-drag;
+    background:
+        linear-gradient(135deg, transparent 0 55%, rgba(255, 255, 255, 0.7) 55% 62%, transparent 62% 72%, rgba(255, 255, 255, 0.7) 72% 79%, transparent 79%);
+    border-bottom-right-radius: 16px;
+}
+
+body.unlocked #grip {
+    display: block;
+}

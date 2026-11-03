@@ -1,0 +1,47 @@
+{
+    "domains": [
+        "doubleclick.net",
+        "googlesyndication.com",
+        "googletagservices.com",
+        "googleadservices.com",
+        "amazon-adsystem.com",
+        "adnxs.com",
+        "rubiconproject.com",
+        "pubmatic.com",
+        "criteo.com",
+        "criteo.net",
+        "taboola.com",
+        "outbrain.com",
+        "moatads.com",
+        "quantserve.com",
+        "quantcount.com",
+        "scorecardresearch.com",
+        "htlbid.com",
+        "casalemedia.com",
+        "openx.net",
+        "indexww.com",
+        "adsrvr.org",
+        "everesttech.net",
+        "demdex.net",
+        "moengage.com"
+    ],
+    "urls": [
+        "https://api-v2.soundcloud.com/promoted"
+    ],
+    "_note": "SoundCloud's own ads must be left alone (api-v2.soundcloud.com/audio-ads, adswizz.com, and not muted): blocking or muting them got the next encrypted track's key refused, and a refusal or two gets the profile refused for hours+ (22-23 Oct 2026). Step tests on 23 Oct: with SoundCloud's ads playing normally and everything below blocked, 72 keys given, none refused, an ad included.",
+    "soundcloudAds": {
+        "domains": [
+            "adswizz.com",
+            "p-cdn.us"
+        ],
+        "urls": [
+            "https://api-v2.soundcloud.com/audio-ad"
+        ],
+        "patterns": [
+            "*://*.sndcdn.com/audio/*",
+            "*://sndcdn.com/audio/*",
+            "*://*.p-cdn.us/public/*"
+        ]
+    },
+    "_note2": "soundcloudAds: SoundCloud's own audio ads, blocked only when the tray switch 'Also block SoundCloud's audio ads' is on (the same addresses uBlock Origin's SoundCloud rules target, dropped rather than replaced). Encrypted tracks may be refused while it is on (seen 22-23 Oct 2026)."
+}

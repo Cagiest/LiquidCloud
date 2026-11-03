@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' https://*.sndcdn.com" />
+    <title>Lyrics Overlay</title>
+    <link rel="stylesheet" href="overlay.css" />
+</head>
+<body class="idle">
+    <div id="frame">
+        <div id="info"><img id="cover" alt="" /><div id="meta"><div id="title"></div><div id="artist"></div></div></div>
+        <div id="view"><canvas id="aura"></canvas><div id="column"></div></div>
+        <div id="msg"></div>
+        <div id="hint">Drag to move &middot; corner to resize &middot; Ctrl+Alt+L locks it in place</div>
+        <div id="grip" title="Resize"></div>
+    </div>
+    <script src="aura.js"></script>
+    <script src="overlay.js"></script>
+</body>
+</html>

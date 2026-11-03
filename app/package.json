@@ -1,0 +1,55 @@
+{
+  "name": "liquidcloud",
+  "productName": "LiquidCloud",
+  "version": "1.0.0",
+  "description": "SoundCloud with the LiquidCloud theme, ad blocking, the lyrics overlay and Discord status",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "sync-overlay": "node sync-overlay.js",
+    "build-theme": "node build-theme.js",
+    "build-window": "dotnet publish browser -c Release -o browser-publish",
+    "dist": "node build-theme.js && dotnet publish browser -c Release -o browser-publish && electron-builder --win portable"
+  },
+  "dependencies": {
+    "@xhayper/discord-rpc": "1.5.1"
+  },
+  "devDependencies": {
+    "electron": "github:castlabs/electron-releases#v44.5.1+wvcus",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "appId": "com.liquidcloud.app",
+    "productName": "LiquidCloud",
+    "electronVersion": "44.5.1",
+    "electronDist": "node_modules/electron/dist",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "discord.js",
+      "package.json",
+      "overlay/**"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "icon.png"
+    },
+    "portable": {
+      "artifactName": "LiquidCloud.exe"
+    },
+    "extraResources": [
+      {
+        "from": "browser-publish/LiquidCloud.Browser.exe",
+        "to": "browser/LiquidCloud.Browser.exe"
+      },
+      {
+        "from": "browser-assets",
+        "to": "browser"
+      }
+    ]
+  }
+}

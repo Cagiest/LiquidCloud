@@ -1,0 +1,18 @@
+# built or downloaded
+node_modules/
+app/release/
+app/browser-publish/
+app/browser/bin/
+app/browser/obj/
+app/browser-assets/
+ios/Resources/
+ios/*.xcodeproj/
+ios/Info.plist
+release/
+backups/
+
+# captures with sign-in data in them: never upload
+compare/
+*.har
+*.devtools
+dev/*.log
