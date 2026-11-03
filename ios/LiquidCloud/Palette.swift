@@ -87,12 +87,10 @@ struct AnimatedBackground: View {
                         Image(uiImage: image).resizable().scaledToFill().frame(width: w, height: h).clipped().opacity(0.55)
                     }
                     ForEach(0..<4, id: \.self) { i in
-                        let d = Double(i)
                         Circle()
                             .fill(palette.colors[i % palette.colors.count])
                             .frame(width: w * 1.15, height: w * 1.15)
-                            .position(x: w * (0.5 + 0.45 * sin(t * (1 + d * 0.31) + d * 1.7)),
-                                      y: h * (0.5 + 0.42 * cos(t * (0.8 + d * 0.23) + d * 2.3)))
+                            .position(Self.blobCenter(i, time: t, width: w, height: h))
                             .opacity(0.85)
                     }
                 }
@@ -104,5 +102,13 @@ struct AnimatedBackground: View {
         .overlay(Color.black.opacity(1 - brightness))
         .animation(.easeInOut(duration: 1.2), value: palette)
         .ignoresSafeArea()
+    }
+
+    // each colour drifts along its own slow loop
+    private static func blobCenter(_ index: Int, time t: Double, width w: CGFloat, height h: CGFloat) -> CGPoint {
+        let d = Double(index)
+        let x: Double = 0.5 + 0.45 * sin(t * (1 + d * 0.31) + d * 1.7)
+        let y: Double = 0.5 + 0.42 * cos(t * (0.8 + d * 0.23) + d * 2.3)
+        return CGPoint(x: w * CGFloat(x), y: h * CGFloat(y))
     }
 }
