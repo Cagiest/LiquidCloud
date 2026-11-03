@@ -41,7 +41,7 @@ final class Engine {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.defaultWebpagePreferences.preferredContentMode = .desktop // Safari's "Request Desktop Website"
-        config.applicationNameForUserAgent = "LiquidCloud/2.7"
+        config.applicationNameForUserAgent = "LiquidCloud/2.8"
         if let url = Bundle.main.url(forResource: "engine", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
@@ -158,9 +158,19 @@ final class Engine {
             artworkAddress = s.artwork
             loadArtwork(s.artwork)
         }
+        // the page reports whole seconds, so while the same song plays on, keep the smoothly counted position
+        // unless the report is clearly off (a seek, a stall); otherwise the lyrics jump back every second
+        var keepClock = false
+        if s.playing, player.playing, s.path == player.path {
+            let counted = livePosition(at: Date())
+            if s.position <= counted + 0.25, s.position > counted - 1.25 {
+                s.position = player.position
+                keepClock = true
+            }
+        }
         if s != player {
             player = s
-            positionDate = Date()
+            if !keepClock { positionDate = Date() }
             updateLockScreen()
         }
     }

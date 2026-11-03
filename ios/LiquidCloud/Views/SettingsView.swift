@@ -11,7 +11,7 @@ struct SettingsView: View {
     @AppStorage(Pref.bgArtwork) private var showArtwork = true
     @AppStorage(Pref.accentFromArt) private var accentFromArt = true
     @AppStorage(Pref.lyricsSize) private var lyricsSize = 30.0
-    @AppStorage(Pref.lyricsCentered) private var centered = false
+    @AppStorage(Pref.lyricsAlign) private var lyricsAlign = LyricsAlign.initial
     @AppStorage(Pref.lyricsBlur) private var blurOthers = true
     @AppStorage(Pref.lyricsOnOpen) private var lyricsOnOpen = false
     @AppStorage(Pref.notesOn) private var notesOn = true
@@ -54,9 +54,10 @@ struct SettingsView: View {
 
                 Section("Lyrics") {
                     LabeledSlider(title: "Text Size", value: $lyricsSize, range: 20...44, step: 1)
-                    Picker("Alignment", selection: $centered) {
-                        Text("Left").tag(false)
-                        Text("Centre").tag(true)
+                    Picker("Alignment", selection: $lyricsAlign) {
+                        Text("Left").tag("left")
+                        Text("Centre").tag("center")
+                        Text("Right").tag("right")
                     }
                     Picker("Visible Lines", selection: $visibleLines) {
                         Text("All").tag(0)

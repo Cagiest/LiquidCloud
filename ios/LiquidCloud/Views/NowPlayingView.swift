@@ -33,10 +33,8 @@ struct NowPlayingView: View {
                         .padding(.bottom, 6)
                         .contentShape(Rectangle())
                         .gesture(closeLyricsDrag)
-                    TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-                        LyricsView(store: lyrics, position: engine.livePosition(at: context.date)) { engine.seek(to: $0) }
-                    }
-                    .transition(.opacity)
+                    LyricsView(store: lyrics, clock: { [engine] in engine.livePosition(at: $0) }) { engine.seek(to: $0) }
+                        .transition(.opacity)
                 } else {
                     Spacer(minLength: 16)
                     bigArtwork

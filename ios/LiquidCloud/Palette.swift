@@ -8,7 +8,8 @@ enum Pref {
     static let bgBrightness = "bg.brightness"
     static let bgArtwork = "bg.artwork"
     static let lyricsSize = "lyrics.size"
-    static let lyricsCentered = "lyrics.centered"
+    static let lyricsCentered = "lyrics.centered" // older Left/Centre switch, read once for lyricsAlign
+    static let lyricsAlign = "lyrics.align" // left, center, right
     static let lyricsBlur = "lyrics.blur"
     static let lyricsOnOpen = "lyrics.onOpen"
     static let accentFromArt = "accent.fromArt"
