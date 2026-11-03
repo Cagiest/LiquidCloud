@@ -61,19 +61,24 @@
     const currentPath = () => { const link = q('.playControls .playbackSoundBadge__titleLink'); return link ? (link.getAttribute('href') || '').split('?')[0] : ''; };
 
     const play = async ({ page, index = 0 }) => {
+        // the old page's buttons and rows stay on screen for a moment after the new page opens: mark them so
+        // only the new page's are pressed
+        if (location.pathname !== page) qa('.fullHero, .listenHero, .trackList__item, .soundList__item').forEach(el => { el.dataset.lcOld = '1'; });
         navigate(page);
         if (!await waitFor(() => location.pathname === page, 8000)) return 'the page did not open';
         if (index < 0) {
             // one song: its big play button
-            const button = await waitFor(() => q('.fullHero .sc-button-play, .listenHero .sc-button-play'), 10000);
+            const button = await waitFor(() => q('.fullHero:not([data-lc-old]) .sc-button-play, .listenHero:not([data-lc-old]) .sc-button-play'), 6000)
+                || q('.fullHero .sc-button-play, .listenHero .sc-button-play');
             if (!button) return 'no play button';
             if (!(currentPath() === page && isPlaying()) && !button.classList.contains('sc-button-pause')) button.click();
             return 'ok';
         }
         // a list: a playlist's rows, or a page of songs (your likes, an artist's songs). Long lists load as
         // the page scrolls, so it scrolls until row `index` is there.
-        const rows = () => { const list = qa('.trackList__item'); return list.length ? list : qa('.soundList__item'); };
-        let list = await waitFor(() => (rows().length ? rows() : null), 10000);
+        const rows = () => { const list = qa('.trackList__item:not([data-lc-old])'); return list.length ? list : qa('.soundList__item:not([data-lc-old])'); };
+        let list = await waitFor(() => (rows().length ? rows() : null), 8000);
+        if (!list) { qa('[data-lc-old]').forEach(el => { delete el.dataset.lcOld; }); list = rows(); }
         for (let tries = 0; list && list.length <= index && tries < 60; tries++) {
             window.scrollTo(0, document.body.scrollHeight);
             await sleep(400);

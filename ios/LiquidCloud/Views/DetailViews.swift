@@ -186,9 +186,7 @@ struct ArtistView: View {
             VStack(alignment: .leading, spacing: 28) {
                 ZStack(alignment: .bottomLeading) {
                     GeometryReader { geo in
-                        AsyncImage(url: artworkURL(shown.avatar, size: "t500x500")) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: { Color(white: 0.15) }
+                        RemoteImage(url: artworkURL(shown.avatar, size: "t500x500")) { Color(white: 0.15) }
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
                     }

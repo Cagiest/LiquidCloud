@@ -30,9 +30,11 @@ struct Palette: Equatable {
         self.accent = accent
     }
 
+    // The cover's main colours by how much of it they cover: pixels are grouped by hue, and each group counts
+    // its colourful pixels (grey and near-black barely count). The biggest group is the accent.
     init(image: UIImage) {
         guard let cg = image.cgImage else { self = .fallback; return }
-        let side = 8
+        let side = 24
         var pixels = [UInt8](repeating: 0, count: side * side * 4)
         let drawn: Bool = pixels.withUnsafeMutableBytes { buffer in
             guard let context = CGContext(data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
@@ -43,27 +45,47 @@ struct Palette: Equatable {
         }
         guard drawn else { self = .fallback; return }
 
-        struct Swatch { var h, s, b: CGFloat }
-        var swatches: [Swatch] = []
+        struct Bin { var weight: CGFloat = 0, x: CGFloat = 0, y: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0 }
+        let binCount = 18
+        var groups = [Bin](repeating: Bin(), count: binCount)
+        var greyWeight: CGFloat = 0, greyB: CGFloat = 0
         for i in stride(from: 0, to: pixels.count, by: 4) {
             let color = UIColor(red: CGFloat(pixels[i]) / 255, green: CGFloat(pixels[i + 1]) / 255, blue: CGFloat(pixels[i + 2]) / 255, alpha: 1)
-            var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-            color.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
-            swatches.append(Swatch(h: h, s: s, b: b))
+            var h: CGFloat = 0, sat: CGFloat = 0, bri: CGFloat = 0, a: CGFloat = 0
+            color.getHue(&h, saturation: &sat, brightness: &bri, alpha: &a)
+            guard sat > 0.18, bri > 0.18 else { greyWeight += 1; greyB += bri; continue }
+            let w = sat * (0.4 + bri) // vivid, lit pixels count more than dull ones
+            let bin = min(Int(h * CGFloat(binCount)), binCount - 1)
+            groups[bin].weight += w
+            groups[bin].x += cos(h * 2 * .pi) * w // hue averaged around the colour wheel
+            groups[bin].y += sin(h * 2 * .pi) * w
+            groups[bin].s += sat * w
+            groups[bin].b += bri * w
         }
-        // the most colourful parts first; skip near-duplicates so the background has some variety
-        let ranked = swatches.sorted { ($0.s * 0.7 + $0.b * 0.3) > ($1.s * 0.7 + $1.b * 0.3) }
-        var picked: [Swatch] = []
-        for swatch in ranked where picked.count < 4 {
-            if picked.allSatisfy({ abs($0.h - swatch.h) > 0.05 || abs($0.b - swatch.b) > 0.25 }) { picked.append(swatch) }
+        let ranked = groups.filter { $0.weight > 0 }.sorted { $0.weight > $1.weight }
+        func hsb(_ g: Bin) -> (h: Double, s: Double, b: Double) {
+            var h = atan2(g.y, g.x) / (2 * .pi)
+            if h < 0 { h += 1 }
+            return (Double(h), Double(g.s / g.weight), Double(g.b / g.weight))
         }
-        while picked.count < 4 { picked.append(ranked[picked.count % ranked.count]) }
 
-        colors = picked.map { Color(hue: Double($0.h), saturation: Double(min($0.s * 1.1, 1)), brightness: Double(min(max($0.b, 0.25), 0.85))) }
-        let lead = picked[0]
-        accent = lead.s < 0.15
-            ? Palette.appleRed
-            : Color(hue: Double(lead.h), saturation: Double(min(max(lead.s, 0.5), 0.9)), brightness: Double(max(lead.b, 0.85)))
+        // a mostly grey or black-and-white cover: soft greys, white accent
+        let total = ranked.reduce(0) { $0 + $1.weight }
+        guard let lead = ranked.first, total > CGFloat(side * side) * 0.04 else {
+            let b = greyWeight > 0 ? Double(greyB / greyWeight) : 0.3
+            colors = [0.18, 0.28, 0.12, 0.22].map { Color(white: min(max(b * 0.6, 0.1), 0.5) + $0 * 0.3) }
+            accent = Color(white: 0.92)
+            return
+        }
+
+        var picked = ranked.prefix(4).map(hsb)
+        while picked.count < 4 { // fewer colours: darker and lighter versions of the main one
+            let m = hsb(lead)
+            picked.append((m.h, m.s, picked.count % 2 == 0 ? m.b * 0.6 : min(m.b * 1.3, 1)))
+        }
+        colors = picked.map { Color(hue: $0.h, saturation: min($0.s * 1.1, 1), brightness: min(max($0.b, 0.25), 0.85)) }
+        let main = hsb(lead)
+        accent = Color(hue: main.h, saturation: min(max(main.s, 0.45), 0.9), brightness: max(main.b, 0.88))
     }
 }
 

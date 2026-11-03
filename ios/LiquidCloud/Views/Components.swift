@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // Places the screens can open
 enum Route: Hashable {
@@ -37,18 +38,54 @@ struct ArtworkView: View {
             .fill(Color(white: 0.17))
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                AsyncImage(url: artworkURL(url, size: resolution), transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        Image(systemName: circle ? "person.fill" : "music.note")
-                            .font(.system(size: (size ?? 120) * 0.32))
-                            .foregroundStyle(Color(white: 0.45))
-                    }
+                RemoteImage(url: artworkURL(url, size: resolution)) {
+                    Image(systemName: circle ? "person.fill" : "music.note")
+                        .font(.system(size: (size ?? 120) * 0.32))
+                        .foregroundStyle(Color(white: 0.45))
                 }
             }
             .frame(width: size, height: size)
             .clipShape(circle ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: corner, style: .continuous)))
+    }
+}
+
+enum ImageCache {
+    static let shared: NSCache<NSURL, UIImage> = {
+        let cache = NSCache<NSURL, UIImage>()
+        cache.countLimit = 400
+        return cache
+    }()
+}
+
+// A picture from the web, kept in memory once loaded. SwiftUI's AsyncImage gives up for good when a long list
+// scrolls past before the picture arrives (blank covers); this loads again whenever it comes back on screen.
+struct RemoteImage<Placeholder: View>: View {
+    let url: URL?
+    @ViewBuilder var placeholder: () -> Placeholder
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image = url.flatMap({ ImageCache.shared.object(forKey: $0 as NSURL) }) ?? image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                placeholder()
+            }
+        }
+        .task(id: url) {
+            guard let url else { image = nil; return }
+            if let hit = ImageCache.shared.object(forKey: url as NSURL) { image = hit; return }
+            image = nil
+            for attempt in 0..<3 {
+                if let (data, _) = try? await URLSession.shared.data(from: url), let loaded = UIImage(data: data) {
+                    ImageCache.shared.setObject(loaded, forKey: url as NSURL)
+                    withAnimation(.easeOut(duration: 0.25)) { image = loaded }
+                    return
+                }
+                if Task.isCancelled { return }
+                try? await Task.sleep(for: .milliseconds(400 * (attempt + 1)))
+            }
+        }
     }
 }
 

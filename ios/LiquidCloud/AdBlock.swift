@@ -1,28 +1,28 @@
 import WebKit
 
-// Blocks ad and tracking servers inside the hidden SoundCloud page (a Safari-style content blocker).
-// SoundCloud's own servers aren't touched, so anything it serves itself still plays.
+// Blocks ad and tracking servers inside the hidden SoundCloud page (a Safari-style content blocker), and
+// SoundCloud's promoted posts. The same list as the PC app's app/adblock.json, which was tested there.
+// SoundCloud's own audio ads (AdsWizz, api-v2.soundcloud.com/audio-ads) must be left alone: blocking them gets
+// the next encrypted song's key refused, so songs skip (seen on PC 22-23 Oct 2026 and here in 2.3).
 enum AdBlock {
     private static let hosts = [
-        "doubleclick.net", "googlesyndication.com", "googleadservices.com", "adservice.google.com",
-        "imasdk.googleapis.com", "google-analytics.com", "googletagmanager.com", "googletagservices.com",
-        "amazon-adsystem.com", "adsrvr.org", "adnxs.com", "criteo.com", "criteo.net", "taboola.com",
-        "outbrain.com", "scorecardresearch.com", "quantserve.com", "quantcount.com", "moatads.com",
-        "pubmatic.com", "rubiconproject.com", "openx.net", "casalemedia.com", "adswizz.com",
-        "adsafeprotected.com", "doubleverify.com", "chartbeat.com", "chartbeat.net", "connect.facebook.net",
-        "ads-twitter.com", "branch.io", "app.link", "smartadserver.com", "teads.tv", "33across.com",
-        "lijit.com", "sharethrough.com", "indexww.com", "bidswitch.net", "everesttech.net"
+        "doubleclick.net", "googlesyndication.com", "googletagservices.com", "googleadservices.com",
+        "amazon-adsystem.com", "adnxs.com", "rubiconproject.com", "pubmatic.com", "criteo.com", "criteo.net",
+        "taboola.com", "outbrain.com", "moatads.com", "quantserve.com", "quantcount.com", "scorecardresearch.com",
+        "htlbid.com", "casalemedia.com", "openx.net", "indexww.com", "adsrvr.org", "everesttech.net",
+        "demdex.net", "moengage.com"
     ]
+    private static let addresses = ["https://api-v2.soundcloud.com/promoted"]
 
     // `done` runs (on the main thread) once the blocker is on, or failed to compile, so the page loads after it
     static func install(on controller: WKUserContentController, done: @escaping () -> Void) {
-        let rules = hosts.map { host in
-            ["trigger": ["url-filter": host.replacingOccurrences(of: ".", with: "\\.")],
-             "action": ["type": "block"]]
-        }
+        let filters = hosts.map { $0.replacingOccurrences(of: ".", with: "\\.") }
+            + addresses.map { "^" + $0.replacingOccurrences(of: ".", with: "\\.") }
+        let rules = filters.map { ["trigger": ["url-filter": $0], "action": ["type": "block"]] }
         guard let data = try? JSONSerialization.data(withJSONObject: rules),
               let json = String(data: data, encoding: .utf8) else { done(); return }
-        WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "liquidcloud-adblock", encodedContentRuleList: json) { list, _ in
+        // a new identifier, so the old 2.3 list (which blocked SoundCloud's own ads) isn't reused
+        WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "liquidcloud-adblock-2", encodedContentRuleList: json) { list, _ in
             DispatchQueue.main.async {
                 if let list { controller.add(list) }
                 done()
