@@ -55,11 +55,14 @@ enum Spicy {
             for item in body["Content"].array {
                 let syllables = item["Lead"]["Syllables"].array
                 guard !syllables.isEmpty else { continue }
-                let words = syllables.map {
-                    LyricWord(start: $0["StartTime"].double ?? 0, end: $0["EndTime"].double ?? 0, text: $0["Text"].text, glue: $0["IsPartOfWord"].bool)
+                func words(_ list: [JSON]) -> [LyricWord] {
+                    list.map { LyricWord(start: $0["StartTime"].double ?? 0, end: $0["EndTime"].double ?? 0, text: $0["Text"].text, glue: $0["IsPartOfWord"].bool) }
                 }
-                let text = words.map { $0.text + ($0.glue ? "" : " ") }.joined().trimmingCharacters(in: .whitespaces)
-                lines.append(LyricLine(id: lines.count, time: item["Lead"]["StartTime"].double ?? words[0].start, text: text, words: words))
+                let lead = words(syllables)
+                let backing = item["Background"].array.flatMap { words($0["Syllables"].array) }
+                let text = lead.map { $0.text + ($0.glue ? "" : " ") }.joined().trimmingCharacters(in: .whitespaces)
+                lines.append(LyricLine(id: lines.count, time: item["Lead"]["StartTime"].double ?? lead[0].start, text: text,
+                                       words: lead, backing: backing, exactWords: true))
             }
             return lines.isEmpty ? nil : Lyrics.Found(lines: lines, synced: true, source: credit)
         case "Line":

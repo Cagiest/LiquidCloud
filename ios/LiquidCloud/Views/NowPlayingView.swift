@@ -33,7 +33,7 @@ struct NowPlayingView: View {
                         .padding(.bottom, 6)
                         .contentShape(Rectangle())
                         .gesture(closeLyricsDrag)
-                    TimelineView(.periodic(from: .now, by: 0.1)) { context in
+                    TimelineView(.animation(minimumInterval: 1 / 30)) { context in
                         LyricsView(store: lyrics, position: engine.livePosition(at: context.date)) { engine.seek(to: $0) }
                     }
                     .transition(.opacity)

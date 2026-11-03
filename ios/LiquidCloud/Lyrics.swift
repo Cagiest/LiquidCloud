@@ -5,7 +5,29 @@ struct LyricLine: Identifiable {
     let id: Int
     let time: Double
     let text: String
-    var words: [LyricWord] = [] // Spicy Lyrics' word timing; empty for line-timed lyrics
+    var words: [LyricWord] = []   // word timing: Spicy Lyrics' own, or estimated for line-timed lyrics
+    var backing: [LyricWord] = [] // backing vocals (Spicy Lyrics), shown smaller under the line
+    var exactWords = false        // the word timing is real, not estimated
+
+    // Line-timed lyrics (LRCLIB) get estimated word timing so they animate the same way: the line's time is
+    // shared out by word length (the PC theme's addEstimatedWords)
+    static func estimatingWords(_ lines: [LyricLine]) -> [LyricLine] {
+        lines.enumerated().map { i, line in
+            guard line.words.isEmpty, !line.text.isEmpty else { return line }
+            let parts = line.text.split(whereSeparator: \.isWhitespace).map(String.init)
+            let next = i + 1 < lines.count ? lines[i + 1].time : nil
+            let span = min(next.map { max(0.4, $0 - line.time) } ?? 4, max(1.2, Double(parts.count) * 0.55))
+            let total = Double(parts.reduce(0) { $0 + $1.count + 1 })
+            var at = line.time
+            var copy = line
+            copy.words = parts.map { text in
+                let length = span * Double(text.count + 1) / total
+                defer { at += length }
+                return LyricWord(start: at, end: at + length, text: text, glue: false)
+            }
+            return copy
+        }
+    }
 }
 
 struct LyricWord {
@@ -37,7 +59,7 @@ final class LyricsStore {
         let found = await Lyrics.find(title: player.title, artist: player.artist, duration: player.duration)
         guard key == loadedFor else { return }
         if let found {
-            lines = found.lines
+            lines = found.synced ? LyricLine.estimatingWords(found.lines) : found.lines
             synced = found.synced
             source = found.source
             status = ""
@@ -47,7 +69,7 @@ final class LyricsStore {
         // timed Spicy lyrics beat everything else; its untimed text only fills in when nothing was found
         if let spicy = await Spicy.find(title: player.title, artist: player.artist, duration: player.duration, engine: engine),
            key == loadedFor, spicy.synced || lines.isEmpty {
-            lines = spicy.lines
+            lines = spicy.synced ? LyricLine.estimatingWords(spicy.lines) : spicy.lines
             synced = spicy.synced
             source = spicy.source
             status = ""
