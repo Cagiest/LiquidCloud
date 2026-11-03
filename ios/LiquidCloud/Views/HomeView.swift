@@ -44,7 +44,6 @@ struct HomeView: View {
             .navigationTitle("Home")
             .toolbar { AccountButtons(engine: engine) }
             .routes()
-            .miniPlayer()
             .refreshable { await load() }
             .task(id: engine.signedIn) { await load() }
         }

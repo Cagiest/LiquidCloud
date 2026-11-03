@@ -23,9 +23,6 @@ extension View {
             }
         }
     }
-
-    // the mini player, floating above the tab bar on every screen
-    func miniPlayer() -> some View { modifier(MiniPlayerInset()) }
 }
 
 struct ArtworkView: View {
@@ -110,7 +107,7 @@ struct PlaylistCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ArtworkView(url: playlist.artwork, size: width, corner: 8)
+            ArtworkView(url: playlist.artwork, size: width, corner: 10)
                 .padding(.bottom, 2)
             Text(playlist.title).font(.system(size: 13, weight: .medium)).lineLimit(1)
             Text(playlist.creator).font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(1)
@@ -125,7 +122,7 @@ struct TrackCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ArtworkView(url: track.artwork, size: width, corner: 8)
+            ArtworkView(url: track.artwork, size: width, corner: 10)
                 .padding(.bottom, 2)
             Text(track.title).font(.system(size: 13, weight: .medium)).lineLimit(1)
             Text(track.artist).font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(1)
@@ -172,32 +169,27 @@ struct Shelf<Content: View>: View {
     }
 }
 
-// Play and Shuffle, side by side under a playlist's header
+// Play and Shuffle, side by side under a playlist's header: two glass capsules
 struct PlayShuffleButtons: View {
     var play: () -> Void
     var shuffle: () -> Void
 
     var body: some View {
-        HStack(spacing: 16) {
-            Button(action: play) {
-                Label("Play", systemImage: "play.fill").frame(maxWidth: .infinity)
+        GlassEffectContainer(spacing: 14) {
+            HStack(spacing: 14) {
+                Button(action: play) {
+                    Label("Play", systemImage: "play.fill").frame(maxWidth: .infinity, minHeight: 30)
+                }
+                Button(action: shuffle) {
+                    Label("Shuffle", systemImage: "shuffle").frame(maxWidth: .infinity, minHeight: 30)
+                }
             }
-            Button(action: shuffle) {
-                Label("Shuffle", systemImage: "shuffle").frame(maxWidth: .infinity)
-            }
-        }
-        .font(.system(size: 17, weight: .semibold))
-        .buttonStyle(CapsuleButtonStyle())
-    }
-}
-
-struct CapsuleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+            .font(.system(size: 17, weight: .semibold))
             .foregroundStyle(.tint)
-            .padding(.vertical, 14)
-            .background(Color(white: 0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .opacity(configuration.isPressed ? 0.6 : 1)
+            .buttonStyle(.glass)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+        }
     }
 }
 
@@ -206,7 +198,7 @@ struct AccountButtons: ToolbarContent {
     let engine: Engine
 
     var body: some ToolbarContent {
-        ToolbarItemGroup(placement: .topBarTrailing) {
+        ToolbarItem(placement: .topBarTrailing) {
             Button { engine.showNotes = true } label: {
                 Image(systemName: "bell")
                     .overlay(alignment: .topTrailing) {
@@ -215,14 +207,18 @@ struct AccountButtons: ToolbarContent {
                         }
                     }
             }
+        }
+        ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        ToolbarItem(placement: .topBarTrailing) {
             Button { engine.showSettings = true } label: {
                 if let me = engine.me {
-                    ArtworkView(url: me.avatar, size: 30, circle: true, resolution: "t120x120")
+                    ArtworkView(url: me.avatar, size: 36, circle: true, resolution: "t120x120")
                 } else {
-                    Image(systemName: "person.crop.circle").font(.system(size: 24))
+                    Image(systemName: "person.crop.circle").font(.system(size: 26))
                 }
             }
         }
+        .sharedBackgroundVisibility(engine.me == nil ? .automatic : .hidden)
     }
 }
 

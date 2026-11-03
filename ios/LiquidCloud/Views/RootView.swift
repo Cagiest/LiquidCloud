@@ -5,53 +5,54 @@ struct RootView: View {
     @Environment(Engine.self) private var engine
     @AppStorage(Pref.accentFromArt) private var accentFromArt = true
     @State private var tab = 0
+    @Namespace private var playerSpace
 
     var body: some View {
         @Bindable var engine = engine
         ZStack {
-            // SoundCloud's site, hidden under the app (it has to stay in the window to keep playing)
-            EngineHost(webView: engine.webView, active: !engine.showSignIn)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            // SoundCloud's site, hidden under the app (it has to stay in the window to keep playing). While
+            // you sign in it comes to the front instead: it never moves to another view.
+            VStack(spacing: 0) {
+                if engine.showSignIn { SignInBar() }
+                EngineHost(webView: engine.webView)
+                    .ignoresSafeArea(edges: engine.showSignIn ? .bottom : .all)
+            }
+            .allowsHitTesting(engine.showSignIn)
+            .zIndex(engine.showSignIn ? 1 : 0)
 
             TabView(selection: $tab) {
-                HomeView()
-                    .tabItem { Label("Home", systemImage: "house.fill") }
-                    .tag(0)
-                LibraryView()
-                    .tabItem { Label("Library", systemImage: "square.stack.fill") }
-                    .tag(1)
-                SearchView()
-                    .tabItem { Label("Search", systemImage: "magnifyingglass") }
-                    .tag(2)
+                Tab("Home", systemImage: "house.fill", value: 0) { HomeView() }
+                Tab("Library", systemImage: "square.stack.fill", value: 1) { LibraryView() }
+                Tab(value: 2, role: .search) { SearchView() }
             }
+            .tabBarMinimizeBehavior(.onScrollDown)
+            .tabViewBottomAccessory {
+                MiniPlayer()
+                    .matchedTransitionSource(id: "player", in: playerSpace)
+            }
+            .opacity(engine.showSignIn ? 0 : 1)
+            .allowsHitTesting(!engine.showSignIn)
         }
+        .background(Color.black)
         .tint(accentFromArt ? engine.palette.accent : Palette.appleRed)
         .animation(.easeInOut(duration: 0.6), value: engine.palette)
-        .sheet(isPresented: $engine.showPlayer) {
+        .animation(.easeInOut(duration: 0.3), value: engine.showSignIn)
+        .fullScreenCover(isPresented: $engine.showPlayer) {
             NowPlayingView()
-                .presentationDragIndicator(.hidden)
-                .presentationCornerRadius(38)
+                .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
         }
         .sheet(isPresented: $engine.showSettings) { SettingsView() }
         .sheet(isPresented: $engine.showNotes) { NotificationsView() }
-        .sheet(isPresented: $engine.showSignIn, onDismiss: { if !engine.signedIn { engine.cancelSignIn() } }) { SignInView() }
     }
 }
 
-// Holds the hidden SoundCloud page. The same web view moves into the sign-in sheet while it's open.
+// Holds the hidden SoundCloud page
 struct EngineHost: UIViewRepresentable {
     let webView: WKWebView
-    var active: Bool
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
         view.backgroundColor = .black
-        return view
-    }
-
-    func updateUIView(_ view: UIView, context: Context) {
-        guard active, webView.superview !== view else { return }
         webView.removeFromSuperview()
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
@@ -61,75 +62,75 @@ struct EngineHost: UIViewRepresentable {
             webView.topAnchor.constraint(equalTo: view.topAnchor),
             webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+        return view
     }
+
+    func updateUIView(_ view: UIView, context: Context) {}
 }
 
-struct MiniPlayerInset: ViewModifier {
-    @Environment(Engine.self) private var engine
-
-    func body(content: Content) -> some View {
-        content.safeAreaInset(edge: .bottom, spacing: 0) {
-            if !engine.player.isEmpty {
-                MiniPlayer()
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-    }
-}
-
-// cover, title, play/pause and next, in a rounded bar above the tab bar; tap it for Now Playing
-struct MiniPlayer: View {
+// above SoundCloud's sign-in page while it's showing
+struct SignInBar: View {
     @Environment(Engine.self) private var engine
 
     var body: some View {
-        HStack(spacing: 12) {
-            ArtworkView(url: engine.player.artwork, size: 40, corner: 6, resolution: "t120x120")
-                .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
-            Text(engine.player.title)
-                .font(.system(size: 15, weight: .medium))
-                .lineLimit(1)
+        HStack {
+            Button("Cancel") { engine.cancelSignIn() }
+                .buttonStyle(.glass)
+            Spacer()
+            Text("Sign in to SoundCloud").font(.system(size: 17, weight: .semibold))
+            Spacer()
+            Color.clear.frame(width: 76, height: 1) // balances Cancel so the title stays centred
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.black)
+    }
+}
+
+// Cover, title, play/pause and next, inside the glass capsule above the tab bar. When the tab bar shrinks
+// while scrolling it moves in beside it and only play/pause stays. Tap it for Now Playing.
+struct MiniPlayer: View {
+    @Environment(Engine.self) private var engine
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+
+    var body: some View {
+        let empty = engine.player.isEmpty
+        HStack(spacing: 10) {
+            ArtworkView(url: engine.player.artwork, size: 32, corner: 6, resolution: "t120x120")
+            VStack(alignment: .leading, spacing: 0) {
+                Text(empty ? "Not Playing" : engine.player.title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .lineLimit(1)
+                if !empty && placement != .inline {
+                    Text(engine.player.artist)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
             Spacer(minLength: 4)
             Button { engine.control("toggle") } label: {
                 Image(systemName: engine.player.playing ? "pause.fill" : "play.fill")
-                    .font(.system(size: 21))
-                    .contentTransition(.symbolEffect(.replace))
-                    .frame(width: 40, height: 40)
-            }
-            Button { engine.control("next") } label: {
-                Image(systemName: "forward.fill")
                     .font(.system(size: 19))
-                    .frame(width: 40, height: 40)
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(width: 34, height: 34)
+            }
+            .disabled(empty)
+            if placement != .inline {
+                Button { engine.control("next") } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 17))
+                        .frame(width: 34, height: 34)
+                }
+                .disabled(empty)
             }
         }
+        .buttonStyle(.plain)
         .foregroundStyle(.primary)
-        .padding(.leading, 8)
-        .padding(.trailing, 6)
-        .frame(height: 58)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(.white.opacity(0.08), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
-        .padding(.horizontal, 10)
-        .padding(.bottom, 6)
+        .padding(.leading, 10)
+        .padding(.trailing, 8)
         .contentShape(Rectangle())
-        .onTapGesture { engine.showPlayer = true }
-    }
-}
-
-struct SignInView: View {
-    @Environment(Engine.self) private var engine
-
-    var body: some View {
-        NavigationStack {
-            EngineHost(webView: engine.webView, active: true)
-                .ignoresSafeArea(edges: .bottom)
-                .navigationTitle("Sign in to SoundCloud")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { engine.cancelSignIn() }
-                    }
-                }
-        }
+        .onTapGesture { if !empty { engine.showPlayer = true } }
     }
 }
 
@@ -143,14 +144,15 @@ struct SignInCard: View {
                 .font(.system(size: 15))
                 .foregroundStyle(.secondary)
             Button { engine.beginSignIn() } label: {
-                Text("Sign In").frame(maxWidth: .infinity)
+                Text("Sign In").frame(maxWidth: .infinity, minHeight: 30)
             }
             .font(.system(size: 17, weight: .semibold))
-            .buttonStyle(CapsuleButtonStyle())
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
             .padding(.top, 4)
         }
-        .padding(18)
-        .background(Color(white: 0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal, 20)
+        .padding(20)
+        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        .padding(.horizontal, 16)
     }
 }

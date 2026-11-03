@@ -31,7 +31,7 @@ struct NotificationsView: View {
                                     .font(.system(size: 14))
                                     .foregroundStyle(.secondary)
                                     .padding(10)
-                                    .background(Color(white: 0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
                             Text(item.date, format: .relative(presentation: .named))
                                 .font(.system(size: 12))
@@ -49,7 +49,7 @@ struct NotificationsView: View {
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() } }
             }
             .refreshable { await load() }
             .task { await load() }

@@ -61,7 +61,6 @@ struct SearchView: View {
             .searchable(text: $query, prompt: "Artists, Songs, Playlists")
             .toolbar { AccountButtons(engine: engine) }
             .routes()
-            .miniPlayer()
             .task(id: query) {
                 let text = query.trimmingCharacters(in: .whitespaces)
                 guard !text.isEmpty else {

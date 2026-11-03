@@ -56,7 +56,6 @@ struct PlaylistView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .miniPlayer()
         .task { await load() }
     }
 
@@ -99,7 +98,7 @@ struct CollectionHeader: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            ArtworkView(url: artwork, size: 250, corner: 10, circle: circle, resolution: "t500x500")
+            ArtworkView(url: artwork, size: 260, corner: 14, circle: circle, resolution: "t500x500")
                 .shadow(color: .black.opacity(0.45), radius: 22, y: 12)
                 .padding(.top, 10)
                 .padding(.bottom, 14)
@@ -130,7 +129,7 @@ struct LikedSongsView: View {
         ScrollView {
             VStack(spacing: 0) {
                 VStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(LinearGradient(colors: [Palette.appleRed, Color(red: 0.55, green: 0.1, blue: 0.4)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 250, height: 250)
                         .overlay(Image(systemName: "heart.fill").font(.system(size: 90)).foregroundStyle(.white))
@@ -162,7 +161,6 @@ struct LikedSongsView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .miniPlayer()
         .task(id: engine.me?.id) {
             guard let me = engine.me else { return }
             if let j = try? await engine.api("users/\(me.id)/track_likes?limit=200") {
@@ -209,11 +207,10 @@ struct ArtistView: View {
                             Button { engine.play(page: user.path + "/popular-tracks", index: 0) } label: {
                                 Image(systemName: "play.fill")
                                     .font(.system(size: 22))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 54, height: 54)
-                                    .background(.tint, in: Circle())
+                                    .frame(width: 40, height: 40)
                             }
-                            .buttonStyle(PressScaleStyle())
+                            .buttonStyle(.glassProminent)
+                            .buttonBorderShape(.circle)
                         }
                     }
                     .padding(20)
@@ -250,7 +247,6 @@ struct ArtistView: View {
         }
         .ignoresSafeArea(edges: .top)
         .navigationBarTitleDisplayMode(.inline)
-        .miniPlayer()
         .task {
             if let j = try? await engine.api("users/\(user.id)") { info = SCUser(j) }
             if let j = try? await engine.api("users/\(user.id)/toptracks?limit=10") { top = j["collection"].array.map { SCTrack($0) } }

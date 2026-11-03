@@ -45,7 +45,6 @@ struct LibraryView: View {
             .navigationTitle("Library")
             .toolbar { AccountButtons(engine: engine) }
             .routes()
-            .miniPlayer()
             .task(id: engine.signedIn) {
                 guard engine.signedIn else { return }
                 recent = await Library.playlists(engine).prefix(20).map { $0 }
@@ -127,7 +126,6 @@ struct CollectionListView: View {
         }
         .listStyle(.plain)
         .navigationTitle(kind == .albums ? "Albums" : "Playlists")
-        .miniPlayer()
         .task {
             let all = await Library.playlists(engine)
             items = all.filter { kind == .albums ? $0.isAlbum : !$0.isAlbum }
@@ -155,7 +153,6 @@ struct ArtistsListView: View {
         }
         .listStyle(.plain)
         .navigationTitle("Artists")
-        .miniPlayer()
         .task {
             if let j = try? await engine.api("me/followings?limit=200") {
                 artists = j["collection"].array.map { SCUser($0) }.sorted { $0.username.localizedCaseInsensitiveCompare($1.username) == .orderedAscending }

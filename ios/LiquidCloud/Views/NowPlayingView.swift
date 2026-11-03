@@ -6,6 +6,7 @@ import SwiftUI
 // volume. The lyrics button swaps the big cover for synced lyrics (the cover shrinks into the corner).
 struct NowPlayingView: View {
     @Environment(Engine.self) private var engine
+    @Environment(\.dismiss) private var dismiss
     @AppStorage(Pref.lyricsOnOpen) private var lyricsOnOpen = false
     @State private var showLyrics = false
     @State private var lyrics = LyricsStore()
@@ -19,7 +20,9 @@ struct NowPlayingView: View {
                 Capsule()
                     .fill(.white.opacity(0.35))
                     .frame(width: 38, height: 5)
-                    .padding(.top, 10)
+                    .frame(width: 120, height: 26)
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismiss() }
 
                 if showLyrics {
                     compactHeader
@@ -138,8 +141,9 @@ struct NowPlayingView: View {
                     .font(.system(size: 21))
                     .foregroundStyle(.white.opacity(showLyrics ? 1 : 0.6))
                     .frame(width: 44, height: 44)
-                    .background(showLyrics ? Color.white.opacity(0.18) : Color.clear, in: Circle())
+                    .glassEffect(showLyrics ? .regular.interactive() : .identity, in: .circle)
             }
+            .buttonStyle(.plain)
             Spacer()
             AirPlayButton().frame(width: 44, height: 44)
             Spacer()
@@ -254,8 +258,8 @@ struct CircleIcon: View {
     var body: some View {
         Image(systemName: icon)
             .font(.system(size: 15, weight: .semibold))
-            .frame(width: 32, height: 32)
-            .background(.white.opacity(0.16), in: Circle())
+            .frame(width: 34, height: 34)
+            .glassEffect(.regular.interactive(), in: .circle)
     }
 }
 

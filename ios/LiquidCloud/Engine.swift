@@ -41,7 +41,7 @@ final class Engine {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.defaultWebpagePreferences.preferredContentMode = .desktop // Safari's "Request Desktop Website"
-        config.applicationNameForUserAgent = "LiquidCloud/2.0"
+        config.applicationNameForUserAgent = "LiquidCloud/2.1"
         if let url = Bundle.main.url(forResource: "engine", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
@@ -219,9 +219,14 @@ final class Engine {
             guard address == artworkAddress else { return }
             artworkImage = image
             palette = Palette(image: image)
-            lockScreenArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            lockScreenArtwork = Self.lockScreenArtwork(image)
             updateLockScreen()
         }
+    }
+
+    // iOS asks for the picture from a background thread, so it's made outside the main actor
+    nonisolated private static func lockScreenArtwork(_ image: UIImage) -> MPMediaItemArtwork {
+        MPMediaItemArtwork(boundsSize: image.size) { _ in image }
     }
 
     private func updateLockScreen() {
