@@ -41,7 +41,7 @@ final class Engine {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.defaultWebpagePreferences.preferredContentMode = .desktop // Safari's "Request Desktop Website"
-        config.applicationNameForUserAgent = "LiquidCloud/2.5"
+        config.applicationNameForUserAgent = "LiquidCloud/2.6"
         if let url = Bundle.main.url(forResource: "engine", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
@@ -92,6 +92,15 @@ final class Engine {
             try? await waitForEngine()
             _ = try? await webView.callAsyncJavaScript("return await LC.play({ page, index })", arguments: ["page": page, "index": index], in: nil, contentWorld: .page)
         }
+    }
+
+    // a Spicy Lyrics request, made from the hidden soundcloud.com page (the origin the key allows).
+    // nil: refused before an answer could be read (a wrong key, or its limit)
+    func spicy(id: String, key: String) async -> (status: Int, body: JSON)? {
+        guard (try? await waitForEngine()) != nil,
+              let text = try? await webView.callAsyncJavaScript("return await LC.spicy(id, key)", arguments: ["id": id, "key": key], in: nil, contentWorld: .page) as? String,
+              let data = text.data(using: .utf8), let j = try? JSON(data: data), let status = j["status"].int, status > 0 else { return nil }
+        return (status, j["body"])
     }
 
     func play(track: SCTrack) { play(page: track.path, index: -1) }

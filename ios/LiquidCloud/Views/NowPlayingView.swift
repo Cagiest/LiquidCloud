@@ -3,7 +3,8 @@ import MediaPlayer
 import SwiftUI
 
 // Full-screen player: the cover over the moving colours of its own artwork, title, controls, then the
-// timeline. The lyrics button swaps everything for synced lyrics (the cover shrinks into the corner).
+// timeline. The lyrics button (or tapping the cover) swaps everything for synced lyrics, the cover shrinking
+// into the corner; dragging down from the top brings the controls back.
 struct NowPlayingView: View {
     @Environment(Engine.self) private var engine
     @Environment(\.dismiss) private var dismiss
@@ -22,13 +23,17 @@ struct NowPlayingView: View {
                     .frame(width: 38, height: 5)
                     .frame(width: 120, height: 26)
                     .contentShape(Rectangle())
-                    .onTapGesture { dismiss() }
+                    .onTapGesture { if showLyrics { closeLyrics() } else { dismiss() } }
+                    .gesture(showLyrics ? closeLyricsDrag : nil)
 
                 if showLyrics {
-                    // lyrics only: no controls until the lyrics button is pressed again
+                    // lyrics only, no controls: drag down from the top (the grabber and the song's header) to go back
                     compactHeader
                         .padding(.top, 18)
-                    TimelineView(.periodic(from: .now, by: 0.25)) { context in
+                        .padding(.bottom, 6)
+                        .contentShape(Rectangle())
+                        .gesture(closeLyricsDrag)
+                    TimelineView(.periodic(from: .now, by: 0.1)) { context in
                         LyricsView(store: lyrics, position: engine.livePosition(at: context.date)) { engine.seek(to: $0) }
                     }
                     .transition(.opacity)
@@ -47,15 +52,43 @@ struct NowPlayingView: View {
                     .transition(.opacity)
                 }
 
-                bottomRow
-                    .padding(.top, showLyrics ? 10 : 30)
-                    .padding(.bottom, 8)
+                if !showLyrics {
+                    bottomRow
+                        .padding(.top, 30)
+                        .padding(.bottom, 8)
+                        .transition(.opacity)
+                }
             }
             .padding(.horizontal, 28)
             .foregroundStyle(.white)
+            .offset(y: lyricsPull)
         }
+        // while the lyrics show, dragging down closes them instead of the player
+        .interactiveDismissDisabled(showLyrics)
         .onAppear { showLyrics = lyricsOnOpen }
-        .task(id: engine.player.title + engine.player.artist) { await lyrics.load(engine.player) }
+        .task(id: engine.player.title + engine.player.artist) { await lyrics.load(engine.player, engine: engine) }
+    }
+
+    @State private var lyricsPull: CGFloat = 0
+
+    private func closeLyrics() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+            showLyrics = false
+            lyricsPull = 0
+        }
+    }
+
+    // pull the top down a little to leave the lyrics; the screen follows the finger with some resistance
+    private var closeLyricsDrag: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in lyricsPull = max(value.translation.height, 0) * 0.35 }
+            .onEnded { value in
+                if value.translation.height > 70 || value.predictedEndTranslation.height > 180 {
+                    closeLyrics()
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { lyricsPull = 0 }
+                }
+            }
     }
 
     // MARK: - Pieces
@@ -136,30 +169,25 @@ struct NowPlayingView: View {
     private var bottomRow: some View {
         HStack {
             Button {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { showLyrics.toggle() }
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { showLyrics = true }
             } label: {
-                Image(systemName: showLyrics ? "quote.bubble.fill" : "quote.bubble")
+                Image(systemName: "quote.bubble")
                     .font(.system(size: 21))
-                    .foregroundStyle(.white.opacity(showLyrics ? 1 : 0.6))
+                    .foregroundStyle(.white.opacity(0.6))
                     .frame(width: 44, height: 44)
-                    .glassEffect(showLyrics ? .regular.interactive() : .identity, in: .circle)
             }
             .buttonStyle(.plain)
             Spacer()
-            Group {
-                AirPlayButton().frame(width: 44, height: 44)
-                Spacer()
-                if let link = URL(string: "https://soundcloud.com" + engine.player.path) {
-                    ShareLink(item: link) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 20))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .frame(width: 44, height: 44)
-                    }
+            AirPlayButton().frame(width: 44, height: 44)
+            Spacer()
+            if let link = URL(string: "https://soundcloud.com" + engine.player.path) {
+                ShareLink(item: link) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .frame(width: 44, height: 44)
                 }
             }
-            .opacity(showLyrics ? 0 : 1)
-            .allowsHitTesting(!showLyrics)
         }
         .padding(.horizontal, 16)
     }

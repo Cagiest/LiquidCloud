@@ -44,6 +44,18 @@
         return res.text();
     };
 
+    // Spicy Lyrics, asked from this page because the key only allows the sites you listed for it
+    // (https://soundcloud.com). Its error replies can't be read here (no CORS header): status 0.
+    const spicy = async (id, key) => {
+        if (!/^[A-Za-z0-9]{22}$/.test(id)) return JSON.stringify({ status: 400 });
+        try {
+            const res = await fetch(`https://api.spicylyrics.org/v1/lyrics/${id}`, { headers: { Authorization: `Bearer ${key}` } });
+            return JSON.stringify({ status: res.status, body: res.ok ? await res.json() : null });
+        } catch (e) {
+            return JSON.stringify({ status: 0 });
+        }
+    };
+
     /* ---------- Moving around the hidden site ---------- */
     // SoundCloud's site changes pages itself when one of its links is clicked
     const navigate = (path) => {
@@ -194,6 +206,6 @@
     scrubTracking();
     setInterval(scrubTracking, 30000);
 
-    window.LC = { api, play, control, seek, state, navigate };
+    window.LC = { api, spicy, play, control, seek, state, navigate };
     post('state', state());
 })();

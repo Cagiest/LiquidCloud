@@ -16,6 +16,8 @@ struct SettingsView: View {
     @AppStorage(Pref.lyricsOnOpen) private var lyricsOnOpen = false
     @AppStorage(Pref.notesOn) private var notesOn = true
     @AppStorage(Pref.blockSoundCloudAds) private var blockSoundCloudAds = false
+    @AppStorage(Pref.lyricsLines) private var visibleLines = 0
+    @AppStorage(Pref.spicyKey) private var spicyKey = ""
     @State private var confirmSignOut = false
 
     var body: some View {
@@ -56,8 +58,25 @@ struct SettingsView: View {
                         Text("Left").tag(false)
                         Text("Centre").tag(true)
                     }
+                    Picker("Visible Lines", selection: $visibleLines) {
+                        Text("All").tag(0)
+                        ForEach([2, 3, 4, 5, 6, 8, 10], id: \.self) { Text("\($0)").tag($0) }
+                    }
                     Toggle("Blur Other Lines", isOn: $blurOthers)
                     Toggle("Open Now Playing on Lyrics", isOn: $lyricsOnOpen)
+                }
+
+                Section {
+                    SecureField("Spicy Lyrics key (sl_pk_…)", text: $spicyKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    if !spicyKey.isEmpty && !Spicy.status.isEmpty {
+                        Text(Spicy.status).font(.system(size: 13)).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Spicy Lyrics (Word by Word)")
+                } footer: {
+                    Text("The client key from developers.spicylyrics.org, with https://soundcloud.com as an allowed origin (the same key as on PC works). Songs are matched to Spotify automatically; songs that aren't on Spotify can't get Spicy Lyrics. Without a key, lyrics come from LRCLIB and Genius.")
                 }
 
                 Section {

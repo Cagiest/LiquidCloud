@@ -5,10 +5,19 @@ struct LyricLine: Identifiable {
     let id: Int
     let time: Double
     let text: String
+    var words: [LyricWord] = [] // Spicy Lyrics' word timing; empty for line-timed lyrics
 }
 
-// Lyrics for the playing song, the same way the PC theme finds them: synced lines from LRCLIB, or plain
-// lyrics from Genius when nothing synced exists.
+struct LyricWord {
+    let start: Double
+    let end: Double
+    let text: String
+    let glue: Bool // part of a longer word: no space after it
+}
+
+// Lyrics for the playing song, the same way the PC theme finds them: synced lines from LRCLIB (or plain lyrics
+// from Genius when nothing synced exists) straight away, then Spicy Lyrics' word timing in their place when
+// you've added a key and it has the song.
 @MainActor @Observable
 final class LyricsStore {
     var lines: [LyricLine] = []
@@ -17,7 +26,7 @@ final class LyricsStore {
     var source = ""
     @ObservationIgnored private var loadedFor = ""
 
-    func load(_ player: PlayerState) async {
+    func load(_ player: PlayerState, engine: Engine) async {
         let key = "\(player.title)|\(player.artist)"
         guard !player.isEmpty, key != loadedFor else { return }
         loadedFor = key
@@ -34,6 +43,14 @@ final class LyricsStore {
             status = ""
         } else {
             status = "No lyrics found for this song"
+        }
+        // timed Spicy lyrics beat everything else; its untimed text only fills in when nothing was found
+        if let spicy = await Spicy.find(title: player.title, artist: player.artist, duration: player.duration, engine: engine),
+           key == loadedFor, spicy.synced || lines.isEmpty {
+            lines = spicy.lines
+            synced = spicy.synced
+            source = spicy.source
+            status = ""
         }
     }
 }

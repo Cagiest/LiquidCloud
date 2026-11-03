@@ -230,12 +230,13 @@ struct PlayShuffleButtons: View {
     }
 }
 
-// bell (with a dot for new activity) and your picture, top right of the main screens
+// Top right of the main screens: the bell (with a dot for new activity) and settings together, then your
+// picture, which opens your own SoundCloud profile (or sign-in when you're signed out)
 struct AccountButtons: ToolbarContent {
     let engine: Engine
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .topBarTrailing) {
             Button { engine.showNotes = true } label: {
                 Image(systemName: "bell")
                     .overlay(alignment: .topTrailing) {
@@ -244,13 +245,16 @@ struct AccountButtons: ToolbarContent {
                         }
                     }
             }
+            Button { engine.showSettings = true } label: { Image(systemName: "gearshape") }
         }
         ToolbarSpacer(.fixed, placement: .topBarTrailing)
         ToolbarItem(placement: .topBarTrailing) {
-            Button { engine.showSettings = true } label: {
-                if let me = engine.me {
+            if let me = engine.me {
+                NavigationLink(value: Route.artist(me)) {
                     ArtworkView(url: me.avatar, size: 36, circle: true, resolution: "t120x120")
-                } else {
+                }
+            } else {
+                Button { engine.beginSignIn() } label: {
                     Image(systemName: "person.crop.circle").font(.system(size: 26))
                 }
             }

@@ -10,6 +10,7 @@ struct LyricsView: View {
     @AppStorage(Pref.lyricsSize) private var size = 30.0
     @AppStorage(Pref.lyricsCentered) private var centered = false
     @AppStorage(Pref.lyricsBlur) private var blurOthers = true
+    @AppStorage(Pref.lyricsLines) private var visibleLines = 0 // 0: all
 
     var body: some View {
         if store.lines.isEmpty {
@@ -30,6 +31,21 @@ struct LyricsView: View {
         return store.lines.lastIndex(where: { $0.time <= position + 0.3 }) ?? -1
     }
 
+    // with a line limit: the line before the sung one, the sung one, and the rest of the limit after it
+    private func shows(_ index: Int, active: Int) -> Bool {
+        guard store.synced, visibleLines > 0 else { return true }
+        let current = max(active, 0)
+        return index >= current - 1 && index <= current + visibleLines - 2
+    }
+
+    // Spicy Lyrics' word timing: in the sung line, each word lights up as it's sung
+    private func lineText(_ line: LyricLine, active: Bool) -> Text {
+        guard active, !line.words.isEmpty else { return Text(line.text.isEmpty ? "♪" : line.text) }
+        return line.words.reduce(Text("")) { result, word in
+            result + Text(word.text + (word.glue ? "" : " ")).foregroundStyle(.white.opacity(position >= word.start ? 1 : 0.45))
+        }
+    }
+
     private var lines: some View {
         let active = activeIndex
         let alignment: HorizontalAlignment = centered ? .center : .leading
@@ -40,12 +56,13 @@ struct LyricsView: View {
                     ForEach(store.lines) { line in
                         let distance = active < 0 ? 0 : abs(line.id - active)
                         let isActive = !store.synced || line.id == active
-                        Text(line.text.isEmpty ? "♪" : line.text)
+                        lineText(line, active: isActive && store.synced)
                             .font(.system(size: size, weight: .bold))
                             .multilineTextAlignment(centered ? .center : .leading)
                             .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
                             .foregroundStyle(.white.opacity(isActive ? 1 : 0.32))
                             .blur(radius: blurOthers && store.synced && !isActive ? min(Double(distance), 4) * 0.7 : 0)
+                            .opacity(shows(line.id, active: active) ? 1 : 0)
                             .scaleEffect(isActive || !store.synced ? 1 : 0.96, anchor: centered ? .center : .leading)
                             .id(line.id)
                             .contentShape(Rectangle())
