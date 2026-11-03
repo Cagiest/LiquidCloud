@@ -2,8 +2,8 @@ import AVKit
 import MediaPlayer
 import SwiftUI
 
-// Full-screen player: the cover over the moving colours of its own artwork, title, scrubber, controls and
-// volume. The lyrics button swaps the big cover for synced lyrics (the cover shrinks into the corner).
+// Full-screen player: the cover over the moving colours of its own artwork, title, controls, then the
+// timeline. The lyrics button swaps everything for synced lyrics (the cover shrinks into the corner).
 struct NowPlayingView: View {
     @Environment(Engine.self) private var engine
     @Environment(\.dismiss) private var dismiss
@@ -25,6 +25,7 @@ struct NowPlayingView: View {
                     .onTapGesture { dismiss() }
 
                 if showLyrics {
+                    // lyrics only: no controls until the lyrics button is pressed again
                     compactHeader
                         .padding(.top, 18)
                     TimelineView(.periodic(from: .now, by: 0.25)) { context in
@@ -36,21 +37,18 @@ struct NowPlayingView: View {
                     bigArtwork
                     Spacer(minLength: 16)
                     titleRow
-                }
-
-                TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                    Scrubber(position: engine.livePosition(at: context.date), duration: engine.player.duration) { engine.seek(to: $0) }
-                }
-                .padding(.top, showLyrics ? 8 : 22)
-
-                transport
-                    .padding(.top, 18)
-
-                VolumeBar()
+                    transport
+                        .padding(.top, 26)
+                        .transition(.opacity)
+                    TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                        Scrubber(position: engine.livePosition(at: context.date), duration: engine.player.duration) { engine.seek(to: $0) }
+                    }
                     .padding(.top, 22)
+                    .transition(.opacity)
+                }
 
                 bottomRow
-                    .padding(.top, 22)
+                    .padding(.top, showLyrics ? 10 : 30)
                     .padding(.bottom, 8)
             }
             .padding(.horizontal, 28)
@@ -78,8 +76,7 @@ struct NowPlayingView: View {
                 .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
                 .onTapGesture { withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { showLyrics = false } }
             titleText
-            Spacer(minLength: 8)
-            trackButtons
+            Spacer(minLength: 0)
         }
     }
 
@@ -119,8 +116,10 @@ struct NowPlayingView: View {
         }
     }
 
+    // shuffle, previous, play/pause, next, repeat
     private var transport: some View {
         HStack {
+            ModeButton(icon: "shuffle", on: engine.player.shuffle) { engine.control("shuffle") }
             Spacer()
             TransportButton(icon: "backward.fill", size: 30) { engine.control("prev") }
             Spacer()
@@ -128,10 +127,12 @@ struct NowPlayingView: View {
             Spacer()
             TransportButton(icon: "forward.fill", size: 30) { engine.control("next") }
             Spacer()
+            ModeButton(icon: engine.player.repeatMode == "one" ? "repeat.1" : "repeat", on: engine.player.repeatMode != "none") { engine.control("repeat") }
         }
         .frame(height: 64)
     }
 
+    // the lyrics button stays put; the others hide while the lyrics show
     private var bottomRow: some View {
         HStack {
             Button {
@@ -145,31 +146,22 @@ struct NowPlayingView: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            AirPlayButton().frame(width: 44, height: 44)
-            Spacer()
-            Menu {
-                Button { engine.control("shuffle") } label: {
-                    Label(engine.player.shuffle ? "Shuffle: On" : "Shuffle: Off", systemImage: "shuffle")
+            Group {
+                AirPlayButton().frame(width: 44, height: 44)
+                Spacer()
+                if let link = URL(string: "https://soundcloud.com" + engine.player.path) {
+                    ShareLink(item: link) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .frame(width: 44, height: 44)
+                    }
                 }
-                Button { engine.control("repeat") } label: {
-                    Label(repeatLabel, systemImage: engine.player.repeatMode == "one" ? "repeat.1" : "repeat")
-                }
-            } label: {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 21))
-                    .foregroundStyle(.white.opacity(engine.player.shuffle || engine.player.repeatMode != "none" ? 1 : 0.6))
-                    .frame(width: 44, height: 44)
             }
+            .opacity(showLyrics ? 0 : 1)
+            .allowsHitTesting(!showLyrics)
         }
         .padding(.horizontal, 16)
-    }
-
-    private var repeatLabel: String {
-        switch engine.player.repeatMode {
-        case "one": return "Repeat: One"
-        case "all": return "Repeat: All"
-        default: return "Repeat: Off"
-        }
     }
 }
 
@@ -275,36 +267,23 @@ struct CircleButton: View {
     }
 }
 
-// the phone's own volume, as a thin bar between two speaker icons
-struct VolumeBar: View {
+// shuffle / repeat: dim when off, bright on a glass circle when on
+struct ModeButton: View {
+    let icon: String
+    let on: Bool
+    var action: () -> Void
+
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "speaker.fill").font(.system(size: 12))
-            SystemVolumeSlider().frame(height: 30)
-            Image(systemName: "speaker.wave.3.fill").font(.system(size: 12))
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(.white.opacity(on ? 1 : 0.5))
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 42, height: 42)
+                .glassEffect(on ? .regular.interactive() : .identity, in: .circle)
         }
-        .foregroundStyle(.white.opacity(0.55))
+        .buttonStyle(PressScaleStyle())
     }
-}
-
-struct SystemVolumeSlider: UIViewRepresentable {
-    func makeUIView(context: Context) -> MPVolumeView {
-        let view = MPVolumeView(frame: .zero)
-        view.tintColor = .white
-        view.setVolumeThumbImage(Self.thumb, for: .normal)
-        return view
-    }
-
-    func updateUIView(_ view: MPVolumeView, context: Context) {}
-
-    // a small round knob instead of the large default one
-    private static let thumb: UIImage = {
-        let size = CGSize(width: 14, height: 14)
-        return UIGraphicsImageRenderer(size: size).image { context in
-            UIColor.white.setFill()
-            context.cgContext.fillEllipse(in: CGRect(origin: .zero, size: size))
-        }
-    }()
 }
 
 struct AirPlayButton: UIViewRepresentable {

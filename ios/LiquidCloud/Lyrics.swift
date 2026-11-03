@@ -163,34 +163,51 @@ enum Lyrics {
         return blocks.isEmpty ? nil : blocks.joined(separator: "\n")
     }
 
-    // the contents of each <div data-lyrics-container="true">, with nested divs counted so each block ends
-    // at its own closing tag
+    // the contents of each <div data-lyrics-container="true">
     private static func lyricBlocks(_ html: String) -> [String] {
         var blocks: [String] = []
         var rest = html[...]
-        while let start = rest.range(of: "data-lyrics-container=\"true\"") {
-            guard let open = rest[start.upperBound...].firstIndex(of: ">") else { break }
-            var i = rest.index(after: open)
-            var depth = 1
-            var end = rest.endIndex
-            while i < rest.endIndex {
-                if rest[i...].hasPrefix("<div") { depth += 1 }
-                else if rest[i...].hasPrefix("</div") {
-                    depth -= 1
-                    if depth == 0 { end = i; break }
-                }
-                i = rest.index(after: i)
-            }
-            blocks.append(plainText(String(rest[rest.index(after: open)..<end])))
+        while let start = rest.range(of: "data-lyrics-container=\"true\""),
+              let open = rest[start.upperBound...].firstIndex(of: ">") {
+            let inner = rest.index(after: open)
+            let end = divEnd(rest, from: inner)
+            blocks.append(plainText(removingExcluded(String(rest[inner..<end]))))
             rest = rest[end...]
         }
         return blocks.filter { !$0.isEmpty }
     }
 
+    // where the div whose contents start at `from` closes (nested divs counted)
+    private static func divEnd(_ text: Substring, from: Substring.Index) -> Substring.Index {
+        var i = from
+        var depth = 1
+        while i < text.endIndex {
+            if text[i...].hasPrefix("<div") { depth += 1 }
+            else if text[i...].hasPrefix("</div") {
+                depth -= 1
+                if depth == 0 { return i }
+            }
+            i = text.index(after: i)
+        }
+        return text.endIndex
+    }
+
+    // Genius's own boxes inside the lyrics (the song's description header, annotations), whole
+    private static func removingExcluded(_ html: String) -> String {
+        var out = ""
+        var rest = html[...]
+        while let mark = ["data-exclude-from-selection", "class=\"LyricsHeader"].compactMap({ rest.range(of: $0) }).min(by: { $0.lowerBound < $1.lowerBound }),
+              let tagStart = rest[..<mark.lowerBound].range(of: "<div", options: .backwards)?.lowerBound,
+              let open = rest[mark.upperBound...].firstIndex(of: ">") {
+            out += rest[..<tagStart]
+            let end = divEnd(rest, from: rest.index(after: open))
+            rest = end < rest.endIndex ? rest[end...].drop(while: { $0 != ">" }).dropFirst() : rest[rest.endIndex...]
+        }
+        return out + rest
+    }
+
     private static func plainText(_ html: String) -> String {
         var t = html.replacingOccurrences(of: #"<br\s*/?>"#, with: "\n", options: .regularExpression)
-        // Genius puts its own notes ("[Verse 1]" headers stay; hidden annotation boxes go)
-        t = t.replacingOccurrences(of: #"<div[^>]*data-exclude-from-selection[^>]*>.*?</div>"#, with: "", options: .regularExpression)
         t = t.replacingOccurrences(of: #"<[^>]+>"#, with: "", options: .regularExpression)
         let entities = ["&amp;": "&", "&quot;": "\"", "&#x27;": "'", "&#39;": "'", "&lt;": "<", "&gt;": ">", "&nbsp;": " "]
         for (entity, char) in entities { t = t.replacingOccurrences(of: entity, with: char) }

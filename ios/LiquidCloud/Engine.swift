@@ -32,6 +32,7 @@ final class Engine {
     @ObservationIgnored private var lockScreenArtwork: MPMediaItemArtwork?
     @ObservationIgnored private(set) var positionDate = Date()
     @ObservationIgnored private var notesLoop: Task<Void, Never>?
+    @ObservationIgnored private var coverFor: [String: String] = [:] // song path -> cover, when the page shows none
 
     private static let home = URL(string: "https://soundcloud.com/discover")!
 
@@ -40,7 +41,7 @@ final class Engine {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.defaultWebpagePreferences.preferredContentMode = .desktop // Safari's "Request Desktop Website"
-        config.applicationNameForUserAgent = "LiquidCloud/2.2"
+        config.applicationNameForUserAgent = "LiquidCloud/2.3"
         if let url = Bundle.main.url(forResource: "engine", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
@@ -55,7 +56,9 @@ final class Engine {
         webView.uiDelegate = bridge
 
         setUpLockScreenButtons()
-        webView.load(URLRequest(url: Self.home))
+        AdBlock.install(on: config.userContentController) { [weak self] in
+            self?.webView.load(URLRequest(url: Self.home))
+        }
         notesLoop = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(20))
@@ -131,6 +134,11 @@ final class Engine {
         s.shuffle = j["shuffle"].bool
         s.repeatMode = j["repeat"].string ?? "none"
 
+        // the player bar doesn't always have the cover yet: look it up from the song instead
+        if s.artwork.isEmpty, !s.path.isEmpty {
+            if let known = coverFor[s.path] { s.artwork = known } else { lookUpCover(s.path) }
+        }
+
         let nowSignedIn = j["signedIn"].bool
         ready = true
         if nowSignedIn != signedIn || (nowSignedIn && me == nil) {
@@ -145,6 +153,22 @@ final class Engine {
             player = s
             positionDate = Date()
             updateLockScreen()
+        }
+    }
+
+    private func lookUpCover(_ path: String) {
+        coverFor[path] = ""
+        Task {
+            let address = "https://soundcloud.com" + path
+            guard let encoded = address.addingPercentEncoding(withAllowedCharacters: .alphanumerics),
+                  let j = try? await api("resolve?url=\(encoded)") else { return }
+            let track = SCTrack(j)
+            guard !track.artwork.isEmpty else { return }
+            coverFor[path] = track.artwork
+            guard player.path == path, player.artwork.isEmpty else { return }
+            player.artwork = track.artwork
+            artworkAddress = track.artwork
+            loadArtwork(track.artwork)
         }
     }
 
