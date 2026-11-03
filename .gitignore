@@ -5,7 +5,6 @@ app/browser-publish/
 app/browser/bin/
 app/browser/obj/
 app/browser-assets/
-ios/Resources/
 ios/*.xcodeproj/
 ios/Info.plist
 release/

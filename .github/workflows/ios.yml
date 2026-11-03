@@ -13,13 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Build the theme for the app
-        run: node ios/build-theme.js
-
       - name: Make the Xcode project
         run: |
           brew install xcodegen
