@@ -15,6 +15,7 @@ struct SettingsView: View {
     @AppStorage(Pref.lyricsBlur) private var blurOthers = true
     @AppStorage(Pref.lyricsOnOpen) private var lyricsOnOpen = false
     @AppStorage(Pref.notesOn) private var notesOn = true
+    @AppStorage(Pref.blockSoundCloudAds) private var blockSoundCloudAds = false
     @State private var confirmSignOut = false
 
     var body: some View {
@@ -57,6 +58,16 @@ struct SettingsView: View {
                     }
                     Toggle("Blur Other Lines", isOn: $blurOthers)
                     Toggle("Open Now Playing on Lyrics", isOn: $lyricsOnOpen)
+                }
+
+                Section {
+                    LabeledContent("Ad & Tracker Blocking", value: "On")
+                    Toggle("Block SoundCloud's Audio Ads", isOn: $blockSoundCloudAds)
+                        .onChange(of: blockSoundCloudAds) { _, on in engine.setBlocksSoundCloudAds(on) }
+                } header: {
+                    Text("Ads")
+                } footer: {
+                    Text("Other companies' ads and trackers and SoundCloud's promoted posts are always blocked. Blocking SoundCloud's own audio ads also makes SoundCloud refuse encrypted songs (many label releases, like brakence's): they skip, and after a refusal or two it can refuse them for hours. Leave it off if you play those.")
                 }
 
                 Section {

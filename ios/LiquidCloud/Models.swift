@@ -18,6 +18,12 @@ struct JSON {
     var array: [JSON] { (value as? [Any])?.map { JSON($0) } ?? [] }
     var exists: Bool { value != nil && !(value is NSNull) }
 
+    // a paid "promoted" post SoundCloud mixes into lists
+    var isPromoted: Bool {
+        self["kind"].text.contains("promoted") || self["promoted_by"].exists || self["promoter"].exists
+            || self["urn"].text.contains("promoted") || self["track"]["promoted_by"].exists
+    }
+
     // an id that may be a number (tracks, users) or a string (system playlists)
     var idString: String {
         if let n = int { return String(n) }

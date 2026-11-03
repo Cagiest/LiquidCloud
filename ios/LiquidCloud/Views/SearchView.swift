@@ -83,8 +83,8 @@ struct SearchView: View {
         async let lists = try? engine.api("search/playlists?q=\(q)&limit=10")
         let (u, s, l) = await (users, songs, lists)
         guard !Task.isCancelled else { return }
-        artists = u?["collection"].array.map { SCUser($0) } ?? []
-        tracks = s?["collection"].array.map { SCTrack($0) } ?? []
-        playlists = l?["collection"].array.map { SCPlaylist($0) } ?? []
+        artists = u?["collection"].array.filter { !$0.isPromoted }.map { SCUser($0) } ?? []
+        tracks = s?["collection"].array.filter { !$0.isPromoted }.map { SCTrack($0) } ?? []
+        playlists = l?["collection"].array.filter { !$0.isPromoted }.map { SCPlaylist($0) } ?? []
     }
 }

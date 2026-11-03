@@ -41,7 +41,7 @@ final class Engine {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.defaultWebpagePreferences.preferredContentMode = .desktop // Safari's "Request Desktop Website"
-        config.applicationNameForUserAgent = "LiquidCloud/2.4"
+        config.applicationNameForUserAgent = "LiquidCloud/2.5"
         if let url = Bundle.main.url(forResource: "engine", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
@@ -154,6 +154,12 @@ final class Engine {
             positionDate = Date()
             updateLockScreen()
         }
+    }
+
+    // the Settings switch for SoundCloud's own audio ads; reloads the page so it applies straight away
+    func setBlocksSoundCloudAds(_ on: Bool) {
+        AdBlock.setBlocksSoundCloudAds(on, controller: webView.configuration.userContentController)
+        if !player.playing { webView.reload() }
     }
 
     private func lookUpCover(_ path: String) {

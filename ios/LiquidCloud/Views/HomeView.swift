@@ -54,13 +54,13 @@ struct HomeView: View {
         defer { loading = false }
         if engine.signedIn, let history = try? await engine.api("me/play-history/tracks?limit=25") {
             var seen = Set<String>()
-            recent = history["collection"].array.map { SCTrack($0["track"]) }.filter { !$0.id.isEmpty && seen.insert($0.id).inserted }
+            recent = history["collection"].array.filter { !$0.isPromoted }.map { SCTrack($0["track"]) }.filter { !$0.id.isEmpty && seen.insert($0.id).inserted }
         }
         if let mixed = try? await engine.api("mixed-selections?limit=12") {
-            shelves = mixed["collection"].array.compactMap { section in
+            shelves = mixed["collection"].array.filter { !$0.isPromoted }.compactMap { section in
                 var seen = Set<String>()
                 let lists = section["items"]["collection"].array
-                    .filter { ["playlist", "system-playlist"].contains($0["kind"].text) }
+                    .filter { ["playlist", "system-playlist"].contains($0["kind"].text) && !$0.isPromoted }
                     .map { SCPlaylist($0) }
                     .filter { !$0.id.isEmpty && seen.insert($0.id).inserted }
                 let title = section["title"].text

@@ -13,7 +13,7 @@ final class SignInController: UIViewController, WKNavigationDelegate, WKUIDelega
     init() {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default() // the same store as the engine, so the sign-in carries over
-        config.applicationNameForUserAgent = "LiquidCloud/2.4"
+        config.applicationNameForUserAgent = "LiquidCloud/2.5"
         webView = WKWebView(frame: .zero, configuration: config)
         super.init(nibName: nil, bundle: nil)
         modalPresentationStyle = .pageSheet

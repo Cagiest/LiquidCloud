@@ -164,7 +164,7 @@ struct LikedSongsView: View {
         .task(id: engine.me?.id) {
             guard let me = engine.me else { return }
             if let j = try? await engine.api("users/\(me.id)/track_likes?limit=200") {
-                tracks = j["collection"].array.map { SCTrack($0["track"]) }.filter { !$0.id.isEmpty }
+                tracks = j["collection"].array.filter { !$0.isPromoted }.map { SCTrack($0["track"]) }.filter { !$0.id.isEmpty }
             }
             loading = false
         }
@@ -247,7 +247,7 @@ struct ArtistView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             if let j = try? await engine.api("users/\(user.id)") { info = SCUser(j) }
-            if let j = try? await engine.api("users/\(user.id)/toptracks?limit=10") { top = j["collection"].array.map { SCTrack($0) } }
+            if let j = try? await engine.api("users/\(user.id)/toptracks?limit=10") { top = j["collection"].array.filter { !$0.isPromoted }.map { SCTrack($0) } }
             if let j = try? await engine.api("users/\(user.id)/albums?limit=20") { albums = j["collection"].array.map { SCPlaylist($0) } }
             if let j = try? await engine.api("users/\(user.id)/playlists_without_albums?limit=20") { playlists = j["collection"].array.map { SCPlaylist($0) } }
         }

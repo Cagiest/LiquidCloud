@@ -175,6 +175,25 @@
         post('state', s);
     }, 400);
 
+    /* ---------- Tracking cleanup (uBlock Origin's SoundCloud privacy rules) ---------- */
+    // SoundCloud's tracking id and its experiment/analytics storage; the sign-in and player cookies are untouched
+    const scrubTracking = () => {
+        for (const name of ['sc_tracking_anonymous_id']) {
+            if (document.cookie.includes(name + '=')) {
+                for (const domain of ['', '; domain=.soundcloud.com', '; domain=soundcloud.com']) {
+                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/${domain}`;
+                }
+            }
+        }
+        try {
+            for (const key of Object.keys(localStorage)) {
+                if (/sc_tracking_anonymous_id|statsig/i.test(key)) localStorage.removeItem(key);
+            }
+        } catch (e) {}
+    };
+    scrubTracking();
+    setInterval(scrubTracking, 30000);
+
     window.LC = { api, play, control, seek, state, navigate };
     post('state', state());
 })();

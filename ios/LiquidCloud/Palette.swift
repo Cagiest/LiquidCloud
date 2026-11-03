@@ -13,6 +13,7 @@ enum Pref {
     static let lyricsOnOpen = "lyrics.onOpen"
     static let accentFromArt = "accent.fromArt"
     static let notesOn = "notes.on"
+    static let blockSoundCloudAds = "ads.blockSoundCloud"
 }
 
 // Colours taken from a cover: four for the moving background, one bright enough for buttons and text
