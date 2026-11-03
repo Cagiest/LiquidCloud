@@ -25,7 +25,6 @@ final class Engine {
     var showPlayer = false
     var showSettings = false
     var showNotes = false
-    var showSignIn = false
 
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored private var bridge: Bridge?
@@ -41,7 +40,7 @@ final class Engine {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.defaultWebpagePreferences.preferredContentMode = .desktop // Safari's "Request Desktop Website"
-        config.applicationNameForUserAgent = "LiquidCloud/2.1"
+        config.applicationNameForUserAgent = "LiquidCloud/2.2"
         if let url = Bundle.main.url(forResource: "engine", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
@@ -136,13 +135,7 @@ final class Engine {
         ready = true
         if nowSignedIn != signedIn || (nowSignedIn && me == nil) {
             signedIn = nowSignedIn
-            if nowSignedIn {
-                Task { await loadMe() }
-                if showSignIn {
-                    showSignIn = false
-                    webView.load(URLRequest(url: Self.home))
-                }
-            }
+            if nowSignedIn { Task { await loadMe() } }
         }
         if s.artwork != artworkAddress {
             artworkAddress = s.artwork
@@ -164,13 +157,10 @@ final class Engine {
     // MARK: - Signing in and out
 
     func beginSignIn() {
-        showSignIn = true
-        webView.load(URLRequest(url: URL(string: "https://soundcloud.com/signin")!))
-    }
-
-    func cancelSignIn() {
-        showSignIn = false
-        webView.load(URLRequest(url: Self.home))
+        SignInController.present { [weak self] signedIn in
+            guard let self, signedIn else { return }
+            webView.load(URLRequest(url: Self.home))
+        }
     }
 
     func signOut() async {

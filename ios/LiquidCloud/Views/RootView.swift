@@ -10,15 +10,10 @@ struct RootView: View {
     var body: some View {
         @Bindable var engine = engine
         ZStack {
-            // SoundCloud's site, hidden under the app (it has to stay in the window to keep playing). While
-            // you sign in it comes to the front instead: it never moves to another view.
-            VStack(spacing: 0) {
-                if engine.showSignIn { SignInBar() }
-                EngineHost(webView: engine.webView)
-                    .ignoresSafeArea(edges: engine.showSignIn ? .bottom : .all)
-            }
-            .allowsHitTesting(engine.showSignIn)
-            .zIndex(engine.showSignIn ? 1 : 0)
+            // SoundCloud's site, hidden under the app (it has to stay in the window to keep playing)
+            EngineHost(webView: engine.webView)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             TabView(selection: $tab) {
                 Tab("Home", systemImage: "house.fill", value: 0) { HomeView() }
@@ -30,13 +25,10 @@ struct RootView: View {
                 MiniPlayer()
                     .matchedTransitionSource(id: "player", in: playerSpace)
             }
-            .opacity(engine.showSignIn ? 0 : 1)
-            .allowsHitTesting(!engine.showSignIn)
         }
         .background(Color.black)
         .tint(accentFromArt ? engine.palette.accent : Palette.appleRed)
         .animation(.easeInOut(duration: 0.6), value: engine.palette)
-        .animation(.easeInOut(duration: 0.3), value: engine.showSignIn)
         .fullScreenCover(isPresented: $engine.showPlayer) {
             NowPlayingView()
                 .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
@@ -66,25 +58,6 @@ struct EngineHost: UIViewRepresentable {
     }
 
     func updateUIView(_ view: UIView, context: Context) {}
-}
-
-// above SoundCloud's sign-in page while it's showing
-struct SignInBar: View {
-    @Environment(Engine.self) private var engine
-
-    var body: some View {
-        HStack {
-            Button("Cancel") { engine.cancelSignIn() }
-                .buttonStyle(.glass)
-            Spacer()
-            Text("Sign in to SoundCloud").font(.system(size: 17, weight: .semibold))
-            Spacer()
-            Color.clear.frame(width: 76, height: 1) // balances Cancel so the title stays centred
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color.black)
-    }
 }
 
 // Cover, title, play/pause and next, inside the glass capsule above the tab bar. When the tab bar shrinks

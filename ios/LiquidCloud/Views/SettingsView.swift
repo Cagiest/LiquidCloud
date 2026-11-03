@@ -73,7 +73,10 @@ struct SettingsView: View {
                     } else {
                         Button("Sign In") {
                             dismiss()
-                            engine.beginSignIn()
+                            Task {
+                                try? await Task.sleep(for: .milliseconds(600)) // after this sheet has closed
+                                engine.beginSignIn()
+                            }
                         }
                     }
                 }
