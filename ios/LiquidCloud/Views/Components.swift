@@ -282,3 +282,42 @@ struct MessageView: View {
         .padding(40)
     }
 }
+
+// Rows for the list screens (Search, Library lists). These are plain scrolling pages rather than SwiftUI's List:
+// rows inside List stopped taking taps in this app, while the same buttons on scrolling pages worked.
+struct RowLink<Content: View>: View {
+    let route: Route
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            NavigationLink(value: route) {
+                HStack(spacing: 8) {
+                    content()
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Divider().padding(.leading, 16)
+        }
+    }
+}
+
+struct RowHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 20, weight: .bold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 18)
+            .padding(.bottom, 4)
+    }
+}

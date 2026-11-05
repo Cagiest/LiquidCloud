@@ -11,17 +11,17 @@ struct SearchView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if query.isEmpty {
-                    MessageView(icon: "magnifyingglass", text: "Search for artists, songs and playlists on SoundCloud.")
-                        .listRowSeparator(.hidden)
-                } else if searching && tracks.isEmpty && artists.isEmpty && playlists.isEmpty {
-                    LoadingView().listRowSeparator(.hidden)
-                }
-                if !artists.isEmpty {
-                    Section("Artists") {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if query.isEmpty {
+                        MessageView(icon: "magnifyingglass", text: "Search for artists, songs and playlists on SoundCloud.")
+                    } else if searching && tracks.isEmpty && artists.isEmpty && playlists.isEmpty {
+                        LoadingView()
+                    }
+                    if !artists.isEmpty {
+                        RowHeader(title: "Artists")
                         ForEach(artists) { user in
-                            NavigationLink(value: Route.artist(user)) {
+                            RowLink(route: Route.artist(user)) {
                                 HStack(spacing: 14) {
                                     ArtworkView(url: user.avatar, size: 52, circle: true, resolution: "t120x120")
                                     VStack(alignment: .leading, spacing: 2) {
@@ -32,19 +32,22 @@ struct SearchView: View {
                             }
                         }
                     }
-                }
-                if !tracks.isEmpty {
-                    Section("Songs") {
+                    if !tracks.isEmpty {
+                        RowHeader(title: "Songs")
                         ForEach(tracks) { track in
-                            Button { engine.play(track: track) } label: { TrackRow(track: track) }
-                                .buttonStyle(.plain)
+                            VStack(spacing: 0) {
+                                Button { engine.play(track: track) } label: { TrackRow(track: track) }
+                                    .buttonStyle(.plain)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 4)
+                                Divider().padding(.leading, 76)
+                            }
                         }
                     }
-                }
-                if !playlists.isEmpty {
-                    Section("Playlists & Albums") {
+                    if !playlists.isEmpty {
+                        RowHeader(title: "Playlists & Albums")
                         ForEach(playlists) { playlist in
-                            NavigationLink(value: Route.playlist(playlist)) {
+                            RowLink(route: Route.playlist(playlist)) {
                                 HStack(spacing: 14) {
                                     ArtworkView(url: playlist.artwork, size: 52, corner: 6)
                                     VStack(alignment: .leading, spacing: 2) {
@@ -56,10 +59,10 @@ struct SearchView: View {
                         }
                     }
                 }
+                .padding(.bottom, 20)
             }
-            .listStyle(.plain)
             .scrollDismissesKeyboard(.immediately)
-            // our own search box: iOS's search mode (.searchable) kept the results from taking taps
+            // our own search box at the top (in place of iOS's search mode)
             .safeAreaInset(edge: .top, spacing: 0) { searchBox }
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.inline)

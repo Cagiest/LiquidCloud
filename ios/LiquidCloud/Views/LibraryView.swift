@@ -105,26 +105,26 @@ struct CollectionListView: View {
     @State private var loading = true
 
     var body: some View {
-        List {
-            if loading && items.isEmpty { LoadingView().listRowSeparator(.hidden) }
-            if !loading && items.isEmpty {
-                MessageView(icon: kind == .albums ? "square.stack" : "music.note.list",
-                            text: kind == .albums ? "Albums you like or save show up here." : "Playlists you make or like show up here.")
-                    .listRowSeparator(.hidden)
-            }
-            ForEach(items) { playlist in
-                NavigationLink(value: Route.playlist(playlist)) {
-                    HStack(spacing: 14) {
-                        ArtworkView(url: playlist.artwork, size: 56, corner: 6)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(playlist.title).font(.system(size: 16)).lineLimit(1)
-                            Text(playlist.creator).font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(1)
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                if loading && items.isEmpty { LoadingView() }
+                if !loading && items.isEmpty {
+                    MessageView(icon: kind == .albums ? "square.stack" : "music.note.list",
+                                text: kind == .albums ? "Albums you like or save show up here." : "Playlists you make or like show up here.")
+                }
+                ForEach(items) { playlist in
+                    RowLink(route: Route.playlist(playlist)) {
+                        HStack(spacing: 14) {
+                            ArtworkView(url: playlist.artwork, size: 56, corner: 6)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(playlist.title).font(.system(size: 16)).lineLimit(1)
+                                Text(playlist.creator).font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(1)
+                            }
                         }
                     }
                 }
             }
         }
-        .listStyle(.plain)
         .navigationTitle(kind == .albums ? "Albums" : "Playlists")
         .task {
             let all = await Library.playlists(engine)
@@ -140,18 +140,19 @@ struct ArtistsListView: View {
     @State private var loading = true
 
     var body: some View {
-        List {
-            if loading && artists.isEmpty { LoadingView().listRowSeparator(.hidden) }
-            ForEach(artists) { user in
-                NavigationLink(value: Route.artist(user)) {
-                    HStack(spacing: 14) {
-                        ArtworkView(url: user.avatar, size: 52, circle: true, resolution: "t120x120")
-                        Text(user.username).font(.system(size: 17)).lineLimit(1)
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                if loading && artists.isEmpty { LoadingView() }
+                ForEach(artists) { user in
+                    RowLink(route: Route.artist(user)) {
+                        HStack(spacing: 14) {
+                            ArtworkView(url: user.avatar, size: 52, circle: true, resolution: "t120x120")
+                            Text(user.username).font(.system(size: 17)).lineLimit(1)
+                        }
                     }
                 }
             }
         }
-        .listStyle(.plain)
         .navigationTitle("Artists")
         .task {
             if let j = try? await engine.api("me/followings?limit=200") {
