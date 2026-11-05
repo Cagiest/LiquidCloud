@@ -9,7 +9,7 @@ enum EngineError: LocalizedError {
 }
 
 // The app's connection to SoundCloud. SoundCloud's site runs in a web view hidden behind the app's screens
-// (EngineHost in RootView): it keeps you signed in, plays the music and answers the API. Resources/engine.js
+// (EngineHost in RootView puts it in the window, behind the app): it keeps you signed in, plays the music and answers the API. Resources/engine.js
 // is the script inside it that this class talks to.
 @MainActor @Observable
 final class Engine {
@@ -41,7 +41,7 @@ final class Engine {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.defaultWebpagePreferences.preferredContentMode = .desktop // Safari's "Request Desktop Website"
-        config.applicationNameForUserAgent = "LiquidCloud/2.8"
+        config.applicationNameForUserAgent = "LiquidCloud/2.9"
         if let url = Bundle.main.url(forResource: "engine", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))

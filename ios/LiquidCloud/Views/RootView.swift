@@ -10,9 +10,9 @@ struct RootView: View {
     var body: some View {
         @Bindable var engine = engine
         ZStack {
-            // SoundCloud's site, hidden under the app (it has to stay in the window to keep playing)
+            // SoundCloud's site, hidden behind the app (it has to stay in the window to keep playing)
             EngineHost(webView: engine.webView)
-                .ignoresSafeArea()
+                .frame(width: 0, height: 0)
                 .allowsHitTesting(false)
 
             TabView(selection: $tab) {
@@ -38,26 +38,34 @@ struct RootView: View {
     }
 }
 
-// Holds the hidden SoundCloud page
+// Puts the hidden SoundCloud page straight into the window, behind everything, and never lets it take
+// touches. Kept inside SwiftUI's layout, the page's own touch handling got in the way of taps on the lists above
+// it (rows not responding while scrolling still worked).
 struct EngineHost: UIViewRepresentable {
     let webView: WKWebView
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        view.backgroundColor = .black
-        webView.removeFromSuperview()
-        webView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(webView)
-        NSLayoutConstraint.activate([
-            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            webView.topAnchor.constraint(equalTo: view.topAnchor),
-            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        return view
+    func makeUIView(context: Context) -> Anchor {
+        let anchor = Anchor()
+        anchor.webView = webView
+        anchor.isUserInteractionEnabled = false
+        return anchor
     }
 
-    func updateUIView(_ view: UIView, context: Context) {}
+    func updateUIView(_ view: Anchor, context: Context) {}
+
+    final class Anchor: UIView {
+        weak var webView: WKWebView?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard let window, let webView, webView.superview !== window else { return }
+            webView.removeFromSuperview()
+            webView.isUserInteractionEnabled = false
+            webView.frame = window.bounds
+            webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            window.insertSubview(webView, at: 0) // under the app's own screen, which covers it
+        }
+    }
 }
 
 // Cover, title, play/pause and next, inside the glass capsule above the tab bar. When the tab bar shrinks
