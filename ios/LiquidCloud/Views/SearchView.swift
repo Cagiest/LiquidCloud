@@ -7,6 +7,7 @@ struct SearchView: View {
     @State private var tracks: [SCTrack] = []
     @State private var playlists: [SCPlaylist] = []
     @State private var searching = false
+    @FocusState private var typing: Bool
 
     var body: some View {
         NavigationStack {
@@ -57,9 +58,13 @@ struct SearchView: View {
                 }
             }
             .listStyle(.plain)
+            .scrollDismissesKeyboard(.immediately)
+            // our own search box: iOS's search mode (.searchable) kept the results from taking taps
+            .safeAreaInset(edge: .top, spacing: 0) { searchBox }
             .navigationTitle("Search")
-            .searchable(text: $query, prompt: "Artists, Songs, Playlists")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { AccountButtons(engine: engine) }
+            .onAppear { if query.isEmpty { typing = true } }
             .routes()
             .task(id: query) {
                 let text = query.trimmingCharacters(in: .whitespaces)
@@ -72,6 +77,30 @@ struct SearchView: View {
                 await search(text)
             }
         }
+    }
+
+    private var searchBox: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("Artists, Songs, Playlists", text: $query)
+                .focused($typing)
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .onSubmit { typing = false }
+            if !query.isEmpty {
+                Button { query = ""; typing = true } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .font(.system(size: 17))
+        .padding(.horizontal, 16)
+        .frame(height: 46)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
     private func search(_ text: String) async {

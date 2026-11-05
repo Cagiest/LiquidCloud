@@ -35,7 +35,7 @@ struct PlaylistView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 16)
 
-                if loading && tracks.isEmpty { LoadingView() }
+                if loading && (tracks.isEmpty || tracks.contains(where: \.isStub)) { LoadingView() }
                 LazyVStack(spacing: 0) {
                     ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                         Button { start(index) } label: {
@@ -84,8 +84,10 @@ struct PlaylistView: View {
         }
         let full = SCPlaylist(j)
         info = full
-        tracks = full.tracks
-        tracks = await fillTracks(full.tracks, engine: engine)
+        // "Related tracks" and other SoundCloud-made playlists only list song ids, so the songs are looked up
+        // before they're shown, rather than showing blank rows meanwhile
+        let filled = await fillTracks(full.tracks, engine: engine)
+        tracks = filled // (kept in order: the song number is used to start it on the page)
     }
 }
 
@@ -149,7 +151,7 @@ struct LikedSongsView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
 
-                if loading && tracks.isEmpty { LoadingView() }
+                if loading && (tracks.isEmpty || tracks.contains(where: \.isStub)) { LoadingView() }
                 LazyVStack(spacing: 0) {
                     ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                         Button { engine.play(page: "/you/likes", index: index) } label: { TrackRow(track: track) }
