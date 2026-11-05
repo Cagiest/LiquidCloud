@@ -36,10 +36,12 @@ struct SearchView: View {
                         RowHeader(title: "Songs")
                         ForEach(tracks) { track in
                             VStack(spacing: 0) {
-                                Button { engine.play(track: track) } label: { TrackRow(track: track) }
-                                    .buttonStyle(.plain)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 4)
+                                Button { engine.play(track: track) } label: {
+                                    TrackRow(track: track)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 4)
+                                }
+                                .buttonStyle(RowPressStyle())
                                 Divider().padding(.leading, 76)
                             }
                         }

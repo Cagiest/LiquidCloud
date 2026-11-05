@@ -303,7 +303,7 @@ struct RowLink<Content: View>: View {
                 .padding(.vertical, 8)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RowPressStyle())
             Divider().padding(.leading, 16)
         }
     }
@@ -319,5 +319,14 @@ struct RowHeader: View {
             .padding(.horizontal, 16)
             .padding(.top, 18)
             .padding(.bottom, 4)
+    }
+}
+
+// rows light up while pressed, so a tap visibly lands
+struct RowPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(Color.white.opacity(configuration.isPressed ? 0.12 : 0))
+            .animation(.easeOut(duration: configuration.isPressed ? 0.05 : 0.3), value: configuration.isPressed)
     }
 }

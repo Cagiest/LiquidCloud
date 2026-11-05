@@ -41,7 +41,7 @@ final class Engine {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.defaultWebpagePreferences.preferredContentMode = .desktop // Safari's "Request Desktop Website"
-        config.applicationNameForUserAgent = "LiquidCloud/3.1"
+        config.applicationNameForUserAgent = "LiquidCloud/3.2"
         if let url = Bundle.main.url(forResource: "engine", withExtension: "js"),
            let source = try? String(contentsOf: url, encoding: .utf8) {
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))

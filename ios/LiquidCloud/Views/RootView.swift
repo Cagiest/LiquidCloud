@@ -18,7 +18,8 @@ struct RootView: View {
             TabView(selection: $tab) {
                 Tab("Home", systemImage: "house.fill", value: 0) { HomeView() }
                 Tab("Library", systemImage: "square.stack.fill", value: 1) { LibraryView() }
-                Tab(value: 2, role: .search) { SearchView() }
+                // a plain tab: content in iOS 26's search-role tab didn't take taps (scrolling still worked)
+                Tab("Search", systemImage: "magnifyingglass", value: 2) { SearchView() }
             }
             .tabBarMinimizeBehavior(.onScrollDown)
             .tabViewBottomAccessory {
