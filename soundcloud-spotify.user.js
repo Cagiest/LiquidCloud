@@ -1,7 +1,11 @@
 // ==UserScript==
 // @name         SoundCloud Spotify Layout & Dynamic Background
 // @namespace    http://tampermonkey.net/
-// @version      6.52
+// @version      6.53
+// @homepageURL  https://github.com/Cagiest/LiquidCloud
+// @supportURL   https://github.com/Cagiest/LiquidCloud/issues
+// @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/soundcloud-spotify.user.js
+// @downloadURL  https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/soundcloud-spotify.user.js
 // @description  Spotify-style layout for SoundCloud: grid playbar with progress under the controls, SF Pro font, dynamic background
 // @match        https://soundcloud.com/*
 // @grant        GM_addStyle
@@ -8749,7 +8753,7 @@
         pane.classList.toggle('sc-off', !s);
         pane.querySelector('.sc-desktop-status').textContent = s
             ? 'Connected to the Lyrics Overlay app. Changes apply straight away; the tray icon has the same settings.'
-            : 'The Lyrics Overlay app is not running. Start it with "Start Lyrics Overlay.cmd" in C:\\presl\\Lyrics\\lyrics-overlay, then play a song.';
+            : 'The Lyrics Overlay desktop app is not running. Start it, then play a song. (It is optional: everything else works without it.)';
         if (!s) return;
         DESKTOP_SCHEMA.forEach((o) => {
             const row = o.key && pane.querySelector(`[data-desktop="${o.key}"]`);
