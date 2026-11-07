@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SoundCloud Spotify Layout & Dynamic Background
 // @namespace    http://tampermonkey.net/
-// @version      7.1
+// @version      7.2
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/soundcloud-spotify.user.js
@@ -7484,28 +7484,28 @@
         { key: 'lyricGlow', type: 'range', label: 'Lyrics glow', def: 50, min: 0, max: 100, cssVar: '--sc-ly-glow', scale: 1, root: true },
         { key: 'lyricWeight', type: 'range', label: 'Lyrics weight', def: 600, min: 400, max: 800, step: 100, cssVar: '--sc-ly-weight', scale: 1, root: true },
         // which side lyric lines are set from (and grow from), in the panel and in fullscreen
-        { key: 'lyricAlign', type: 'seg', label: 'Lyrics alignment', def: 'left', attr: 'lyAlign', root: true, options: [['left', 'Left'], ['center', 'Middle'], ['right', 'Right']] },
+        { key: 'lyricAlign', type: 'seg', label: 'Lyrics alignment', def: 'center', attr: 'lyAlign', root: true, options: [['left', 'Left'], ['center', 'Middle'], ['right', 'Right']] },
         { section: 'Layout' },
         { key: 'art', type: 'switch', label: 'Show cover art', def: true },
         { key: 'lyrics', type: 'switch', label: 'Show lyrics', def: true },
         { key: 'layout', type: 'seg', label: 'Lyrics position', def: 'right', options: [['left', 'Left'], ['right', 'Right'], ['below', 'Below']] },
         { key: 'centerNoLyrics', type: 'switch', label: 'Centre cover when no lyrics are found', def: true },
-        { key: 'artSize', type: 'range', label: 'Cover size', def: 100, min: 40, max: 150, cssVar: '--lyf-art', scale: 0.01 },
+        { key: 'artSize', type: 'range', label: 'Cover size', def: 121, min: 40, max: 150, cssVar: '--lyf-art', scale: 0.01 },
         // which point of its half of the screen the cover + title block is pinned to ('' = follow the layout)
-        { key: 'anchor', type: 'anchor', label: 'Cover anchor point', def: '' },
-        { key: 'lyricSize', type: 'range', label: 'Lyrics size', def: 100, min: 50, max: 180, cssVar: '--lyf-lyric', scale: 0.01 },
+        { key: 'anchor', type: 'anchor', label: 'Cover anchor point', def: 'mc' },
+        { key: 'lyricSize', type: 'range', label: 'Lyrics size', def: 125, min: 50, max: 180, cssVar: '--lyf-lyric', scale: 0.01 },
         { section: 'Title and artist' },
         { key: 'showTitle', type: 'switch', label: 'Show song title', def: true, attr: 'showTitle' },
         { key: 'showArtist', type: 'switch', label: 'Show artist', def: true, attr: 'showArtist' },
         { key: 'textAlign', type: 'seg', label: 'Alignment', def: 'left', attr: 'textAlign', options: [['left', 'Left'], ['center', 'Middle'], ['right', 'Right']] },
-        { key: 'textSize', type: 'range', label: 'Text size', def: 100, min: 50, max: 250, cssVar: '--lyf-text', scale: 0.01 },
+        { key: 'textSize', type: 'range', label: 'Text size', def: 146, min: 50, max: 250, cssVar: '--lyf-text', scale: 0.01 },
         { section: 'Background' },
         { key: 'brightness', type: 'range', label: 'Brightness', def: 45, min: 5, max: 100, cssVar: '--lyf-brightness', scale: 0.01 },
         { key: 'blurAmount', type: 'range', label: 'Blur', def: 70, min: 0, max: 140, cssVar: '--lyf-blur', scale: 1 },
         { key: 'rotate', type: 'switch', label: 'Rotate while playing', def: false },
         { key: 'rotateSpeed', type: 'range', label: 'Rotation speed', def: 4, min: 1, max: 10 },
         { section: 'Controls' },
-        { key: 'bar', type: 'seg', label: 'Player bar', def: 'always', stack: true, options: VISIBILITY },
+        { key: 'bar', type: 'seg', label: 'Player bar', def: 'hover', stack: true, options: VISIBILITY },
         { key: 'vol', type: 'seg', label: 'Volume bar', def: 'off', stack: true, options: VISIBILITY },
         { key: 'volPos', type: 'seg', label: 'Volume bar position', def: 'screen-right', stack: true,
             options: [['screen-left', 'Screen left'], ['cover-left', 'Cover left'], ['cover-right', 'Cover right'], ['screen-right', 'Screen right']] }
