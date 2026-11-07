@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      7.3
+// @version      7.4
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -4681,11 +4681,6 @@
             transition: transform 0.2s ease;
         }
 
-        #sc-settings .sc-desktop-pane.sc-off .sc-lyf-set {
-            opacity: 0.4;
-            pointer-events: none;
-        }
-
         .sc-lyf-switch.sc-on {
             background: var(--sc-accent);
         }
@@ -7966,8 +7961,6 @@
         });
         renderTimingSongs();
 
-        addTab('Desktop lyrics');
-        buildDesktopPane(pane);
 
         const reset = document.createElement('button');
         reset.type = 'button';
@@ -7997,7 +7990,7 @@
         }
         const open = typeof force === 'boolean' ? force : !panel.classList.contains('sc-open');
         panel.classList.toggle('sc-open', open);
-        if (open) { applyLyfSettings(); renderTimingSongs(); refreshOffsetRows(); renderDesktopPane(); }
+        if (open) { applyLyfSettings(); renderTimingSongs(); refreshOffsetRows(); }
         if (open && document.getElementById('sc-notes')) document.getElementById('sc-notes').classList.remove('sc-open');
     };
 
@@ -8561,10 +8554,10 @@
     };
 
     /* ---------- Desktop lyrics ----------
-       Sends the playing song's lyrics and position to the Lyrics Overlay app on this computer
-       (127.0.0.1:8766), which floats them on the desktop. The lyrics go once per song (the app answers with
-       the version it holds); the position goes about five times a second. When the app is not running this
-       only checks back every few seconds. */
+       Sends the playing song's lyrics and position to Pretzel's Lyrics Overlay on this computer
+       (127.0.0.1:8766), which floats them on the desktop; all of its settings are in the overlay itself. The
+       lyrics go once per song (the app answers with the version it holds); the position goes about five times
+       a second. When the app is not running this only checks back every few seconds. */
     const desktopLyrics = { session: Math.random().toString(36).slice(2), count: 0, sent: undefined, ver: '', appVer: null, busy: false, next: 0 };
     const syncDesktopLyrics = () => {
         if (desktopLyrics.busy || Date.now() < desktopLyrics.next ) return;
@@ -8603,16 +8596,11 @@
             onload: (res) => {
                 desktopLyrics.busy = false;
                 let ok = res.status === 200;
-                try {
-                    const reply = JSON.parse(res.responseText);
-                    desktopLyrics.appVer = reply.ver;
-                    takeOverlaySettings(reply.settings);
-                } catch (e) { ok = false; }
+                try { desktopLyrics.appVer = JSON.parse(res.responseText).ver; } catch (e) { ok = false; }
                 desktopLyrics.next = Date.now() + (ok ? 200 : 5000);
-                if (!ok) overlayGone();
             },
-            onerror: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; overlayGone(); },
-            ontimeout: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; overlayGone(); }
+            onerror: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; },
+            ontimeout: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; }
         });
     };
 
@@ -8621,162 +8609,6 @@
         const el = document.querySelector('.playControls__soundBadge .playbackSoundBadge__avatar span.sc-artwork');
         const m = el && getComputedStyle(el).backgroundImage.match(/url\(["']?(.+?)["']?\)/);
         return m ? m[1].replace(/-t\d+x\d+/, '-t200x200') : '';
-    };
-
-    /* ---------- Desktop lyrics settings (Settings > Desktop lyrics) ----------
-       The overlay app keeps its own settings; it sends them back with every reply, and changes made here are
-       posted to it (127.0.0.1:8766/settings). Changes made from its tray menu show up here the same way. */
-    const overlayApp = { settings: null, sig: '', pending: null, sending: false };
-    const takeOverlaySettings = (next) => {
-        if (!next || typeof next !== 'object') return;
-        const sig = JSON.stringify(next);
-        if (sig === overlayApp.sig) return;
-        overlayApp.sig = sig;
-        overlayApp.settings = next;
-        renderDesktopPane();
-    };
-    const overlayGone = () => {
-        if (!overlayApp.settings) return;
-        overlayApp.settings = null;
-        overlayApp.sig = '';
-        renderDesktopPane();
-    };
-    // sliders send many small changes: they are merged, and only one request is on its way at a time
-    const setOverlay = (patch) => {
-        if (!overlayApp.settings ) return;
-        Object.assign(overlayApp.settings, patch);
-        overlayApp.pending = Object.assign(overlayApp.pending || {}, patch);
-        renderDesktopPane();
-        if (overlayApp.sending) return;
-        const send = () => {
-            const body = overlayApp.pending;
-            overlayApp.pending = null;
-            if (!body) { overlayApp.sending = false; return; }
-            overlayApp.sending = true;
-            gmRequest({
-                method: 'POST',
-                url: 'http://127.0.0.1:8766/settings',
-                headers: { 'Content-Type': 'application/json' },
-                data: JSON.stringify(body),
-                timeout: 2000,
-                onload: (res) => {
-                    try { if (!overlayApp.pending) takeOverlaySettings(JSON.parse(res.responseText).settings); } catch (e) {}
-                    send();
-                },
-                onerror: () => { overlayApp.sending = false; overlayGone(); },
-                ontimeout: () => { overlayApp.sending = false; overlayGone(); }
-            });
-        };
-        send();
-    };
-
-    // the rows of the Desktop lyrics tab; get/set convert between the app's value and the control's
-    const DESKTOP_SCHEMA = [
-        { head: 'Text' },
-        { key: 'fontSize', type: 'range', label: 'Text size', min: 16, max: 96 },
-        { key: 'weight', type: 'seg', label: 'Weight', options: [[500, 'Medium'], [600, 'Semibold'], [700, 'Bold']] },
-        { key: 'glow', type: 'range', label: 'Text glow', min: 0, max: 100 },
-        { key: 'align', type: 'seg', label: 'Alignment', options: [['left', 'Left'], ['center', 'Middle'], ['right', 'Right']] },
-        { key: 'lines', type: 'seg', label: 'Lines shown', options: [[0, 'Fill window'], [1, '1'], [3, '3'], [5, '5']] },
-        { key: 'backdrop', type: 'seg', label: 'Behind the text', options: [['none', 'Nothing'], ['shadow', 'Shadow'], ['panel', 'Dark panel']] },
-        { head: 'Aura' },
-        { key: 'aura', type: 'range', label: 'Aura opacity', min: 0, max: 200, step: 5, get: v => Math.round(v * 100), set: v => v / 100 },
-        { head: 'Now playing' },
-        { key: 'showCover', type: 'switch', label: 'Cover' },
-        { key: 'showTitle', type: 'switch', label: 'Title' },
-        { key: 'showArtist', type: 'switch', label: 'Artist' },
-        { key: 'coverSize', type: 'range', label: 'Cover size', min: 24, max: 120 },
-        { head: 'Windows' },
-        { key: 'locked', type: 'switch', label: 'Lock in place (clicks pass through)' },
-        { key: 'fadeOnHover', type: 'switch', label: 'Fade out under the mouse when locked' },
-        { key: 'hidden', type: 'switch', label: 'Hide the lyrics' },
-        { key: 'infoHidden', type: 'switch', label: 'Hide now playing' }
-    ];
-
-    const buildDesktopPane = (pane) => {
-        pane.classList.add('sc-desktop-pane');
-        const status = document.createElement('div');
-        status.className = 'sc-lyf-hint sc-desktop-status';
-        pane.appendChild(status);
-        DESKTOP_SCHEMA.forEach((o) => {
-            if (o.head) {
-                const h = document.createElement('h3');
-                h.textContent = o.head;
-                pane.appendChild(h);
-                return;
-            }
-            const row = document.createElement('div');
-            row.className = 'sc-lyf-set';
-            row.dataset.desktop = o.key;
-            const label = document.createElement('span');
-            label.textContent = o.label;
-            row.appendChild(label);
-            if (o.type === 'switch') {
-                const sw = document.createElement('button');
-                sw.type = 'button';
-                sw.className = 'sc-lyf-switch';
-                sw.addEventListener('click', () => overlayApp.settings && setOverlay({ [o.key]: !overlayApp.settings[o.key] }));
-                row.appendChild(sw);
-            } else if (o.type === 'seg') {
-                const seg = document.createElement('div');
-                seg.className = 'sc-lyf-seg';
-                o.options.forEach(([value, text]) => {
-                    const b = document.createElement('button');
-                    b.type = 'button';
-                    b.textContent = text;
-                    b.dataset.value = String(value);
-                    b.addEventListener('click', () => setOverlay({ [o.key]: value }));
-                    seg.appendChild(b);
-                });
-                row.appendChild(seg);
-            } else if (o.type === 'anchor') {
-                // same 3x3 picker as the cover anchor point; one cell is always chosen
-                const grid = document.createElement('div');
-                grid.className = 'sc-lyf-anchor';
-                ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br'].forEach((value) => {
-                    const b = document.createElement('button');
-                    b.type = 'button';
-                    b.dataset.value = value;
-                    b.title = { t: 'Top', m: 'Middle', b: 'Bottom' }[value[0]] + ' ' + { l: 'left', c: 'centre', r: 'right' }[value[1]];
-                    b.addEventListener('click', () => setOverlay({ [o.key]: value }));
-                    grid.appendChild(b);
-                });
-                row.appendChild(grid);
-            } else {
-                const input = document.createElement('input');
-                input.type = 'range';
-                input.min = String(o.min);
-                input.max = String(o.max);
-                input.step = String(o.step || 1);
-                input.addEventListener('input', () => setOverlay({ [o.key]: o.set ? o.set(Number(input.value)) : Number(input.value) }));
-                row.appendChild(input);
-            }
-            pane.appendChild(row);
-        });
-        renderDesktopPane();
-    };
-
-    const renderDesktopPane = () => {
-        const pane = document.querySelector('#sc-settings .sc-desktop-pane');
-        if (!pane) return;
-        const s = overlayApp.settings;
-        pane.classList.toggle('sc-off', !s);
-        pane.querySelector('.sc-desktop-status').textContent = s
-            ? 'Connected to the Lyrics Overlay app. Changes apply straight away; the tray icon has the same settings.'
-            : 'The Lyrics Overlay desktop app is not running. Start it, then play a song. (It is optional: everything else works without it.)';
-        if (!s) return;
-        DESKTOP_SCHEMA.forEach((o) => {
-            const row = o.key && pane.querySelector(`[data-desktop="${o.key}"]`);
-            if (!row) return;
-            const value = s[o.key];
-            if (o.type === 'switch') row.querySelector('.sc-lyf-switch').classList.toggle('sc-on', !!value);
-            else if (o.type === 'seg') row.querySelectorAll('.sc-lyf-seg button').forEach(b => b.classList.toggle('sc-on', b.dataset.value === String(value)));
-            else if (o.type === 'anchor') row.querySelectorAll('.sc-lyf-anchor button').forEach(b => b.classList.toggle('sc-on', b.dataset.value === value));
-            else {
-                const input = row.querySelector('input');
-                if (!input.matches(':active')) input.value = String(o.get ? o.get(value) : value); // not while it is being dragged
-            }
-        });
     };
 
     /* ---------- Word animation (every frame) ----------
@@ -8858,7 +8690,7 @@
     };
 
     let accentFor = '';
-    let artPalette = []; // up to three '#rrggbb' colours from the artwork, for the Lyrics Overlay's aura
+    let artPalette = []; // up to three '#rrggbb' colours from the artwork, for Pretzel's Lyrics Overlay's aura
 
     const hslToHex = (h, s, l) => {
         const f = (n) => {
