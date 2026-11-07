@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         SoundCloud Spotify Layout & Dynamic Background
 // @namespace    http://tampermonkey.net/
-// @version      6.53
+// @version      6.54
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
-// @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/soundcloud-spotify.user.js
-// @downloadURL  https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/soundcloud-spotify.user.js
+// @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
+// @downloadURL  https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
 // @description  Spotify-style layout for SoundCloud: grid playbar with progress under the controls, SF Pro font, dynamic background
 // @match        https://soundcloud.com/*
 // @grant        GM_addStyle
