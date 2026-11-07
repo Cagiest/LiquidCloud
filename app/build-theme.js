@@ -1,5 +1,5 @@
 // Builds browser-assets/theme.js: what LiquidCloud's SoundCloud window (browser/Program.cs) runs in every
-// SoundCloud page. It is the theme (../soundcloud-spotify.user.js) with its Tampermonkey stand-ins and
+// SoundCloud page. It is the theme (../liquidcloud.user.js) with its Tampermonkey stand-ins and
 // audio-tap.js (inject.js), plus the bridge they use: window.__liquid over WebView2's messages. Next to it go
 // adblock.json (the ad-blocking list) and connect.json (the sites the theme may reach).
 //

@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SoundCloud Spotify Layout & Dynamic Background
+// @name         LiquidCloud (dev loader)
 // @namespace    http://tampermonkey.net/
 // @version      6.29.1
 // @description  DEV LOADER - loads the script being developed from 127.0.0.1:8765 and lets the dev session inspect the page. Replace with the final script when development is done.

@@ -5,8 +5,8 @@ A Tampermonkey userscript that restyles soundcloud.com to match Spotify running 
 script with several broken areas) and is now v6.44.
 
 - **Project folder:** `C:preslLiquidCloud` (script, `dev/` server and loader, `backups/` per version)
-- **Script:** `soundcloud-spotify.user.js` (CSS first, then JavaScript)
-- **Standalone copies:** `Downloads\SoundCloud Spotify Layout & Dynamic Background-6.xx.user.js`
+- **Script:** `liquidcloud.user.js` (CSS first, then JavaScript)
+- **Standalone copies:** `Downloads\LiquidCloud-x.xx.user.js`
 - **Browser:** Opera GX with Tampermonkey, logged in to SoundCloud
 
 ## Overall layout
@@ -202,9 +202,9 @@ status and tray, reached at 127.0.0.1:8766. Build with `npm run dist`; details i
 
 ## How development works
 
-- **Dev server:** `node dev/server.js soundcloud-spotify.user.js` from the project folder. It stops
+- **Dev server:** `node dev/server.js liquidcloud.user.js` from the project folder. It stops
   when the session that started it ends and has to be started again.
-- **Dev loader:** a small Tampermonkey script that loads `soundcloud-spotify.user.js` from this
+- **Dev loader:** a small Tampermonkey script that loads `liquidcloud.user.js` from this
   computer (127.0.0.1:8765) and lets the Claude session read the page and run test snippets on the
   visible SoundCloud tab. It only talks to this computer.
 - **Installing a standalone copy replaces the loader** and disconnects the session. Re-installing the

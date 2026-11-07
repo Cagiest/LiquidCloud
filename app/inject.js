@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 // the packaged app carries its own copy; running from source reads the one in .. (edited live)
-const USERSCRIPT = [path.join(__dirname, 'soundcloud-spotify.user.js'), path.join(__dirname, '..', 'soundcloud-spotify.user.js')].find(f => fs.existsSync(f));
+const USERSCRIPT = [path.join(__dirname, 'liquidcloud.user.js'), path.join(__dirname, '..', 'liquidcloud.user.js')].find(f => fs.existsSync(f));
 const AUDIO_TAP = path.join(__dirname, 'audio-tap.js');
 
 const SHIMS = `

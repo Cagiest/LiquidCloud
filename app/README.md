@@ -15,7 +15,7 @@ Windows, gets them. So LiquidCloud is two programs packed in one file:
 | --- | --- |
 | `browser/` (`LiquidCloud.Browser.exe`) | The SoundCloud window: C# + WebView2. Runs the theme in every SoundCloud page, answers the theme's requests (the companion, and the userscript's `@connect` sites only), blocks ads (`adblock.json`), remembers its position. No Windows title bar: the theme's top bar is the title bar (46px, search centred, drag region, its own minimise / maximise / close; the window keeps its frame for resizing, snap and shadow). Profile: `%APPDATA%\LiquidCloud\webview2` |
 | `main.js` | The companion (Electron): opens the window, runs the lyrics overlay, Discord status and the tray, and listens on http://127.0.0.1:8766 (the same address the standalone overlay uses) |
-| `build-theme.js` | Builds `browser-assets/theme.js`: the theme (`../soundcloud-spotify.user.js`) with stand-ins for Tampermonkey (`inject.js`), `audio-tap.js` and the bridge to the window program; plus `adblock.json` and `connect.json` |
+| `build-theme.js` | Builds `browser-assets/theme.js`: the theme (`../liquidcloud.user.js`) with stand-ins for Tampermonkey (`inject.js`), `audio-tap.js` and the bridge to the window program; plus `adblock.json` and `connect.json` |
 | `audio-tap.js` | Hears unencrypted songs for the aura (encrypted ones follow the lyric timing) |
 | `discord.js` | "Listening to" status with song, artist, cover, time left and a Listen on SoundCloud button |
 | `overlay/` | The lyrics overlay, copied from `C:\presl\Lyrics\lyrics-overlay` by `npm run sync-overlay` (edit it there) |

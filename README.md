@@ -5,7 +5,7 @@ A Spotify-style look for [SoundCloud](https://soundcloud.com): a grid player bar
 ## Userscript (any browser)
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/).
-2. Open **[soundcloud-spotify.user.js](https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/soundcloud-spotify.user.js)** and press **Install**.
+2. Open **[liquidcloud.user.js](https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js)** and press **Install**.
 3. Open soundcloud.com.
 
 Updates come through Tampermonkey the usual way: it checks this repository for a newer version (once a day by

@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         SoundCloud Spotify Layout & Dynamic Background
+// @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      7.2
+// @version      7.3
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
-// @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/soundcloud-spotify.user.js
-// @downloadURL  https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/soundcloud-spotify.user.js
-// @description  Spotify-style layout for SoundCloud: grid playbar with progress under the controls, SF Pro font, dynamic background
+// @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
+// @downloadURL  https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
+// @description  LiquidCloud: a new look for SoundCloud. Floating player bar with the progress under the controls, SF Pro font, a background coloured by the cover, and synced lyrics
 // @match        https://soundcloud.com/*
 // @grant        GM_addStyle
 // @grant        unsafeWindow
@@ -21,6 +21,16 @@
 
 (function() {
     'use strict';
+
+    // Settings saved under the script's old name (before 7.3) move to the LiquidCloud names once
+    try {
+        [['sc-spotify-lyrics-keys', 'sc-lc-lyrics-keys'], ['sc-spotify-track-ids', 'sc-lc-track-ids'],
+         ['sc-spotify-lyrics-full', 'sc-lc-settings'], ['sc-spotify-lyrics-timing', 'sc-lc-lyrics-timing']].forEach(([from, to]) => {
+            const old = localStorage.getItem(from);
+            if (old !== null && localStorage.getItem(to) === null) localStorage.setItem(to, old);
+            localStorage.removeItem(from);
+        });
+    } catch (e) {}
 
     /* The script starts before the page is read (document-start) for one thing only: Safari's "Open in the
        SoundCloud app" banner on iPhone comes from <meta name="apple-itunes-app">, and removing it only works
@@ -244,7 +254,7 @@
         }
 
         /* 3. Sticky Edge-to-Edge Top Nav Bar */
-        #sc-spotify-top-bar {
+        #lc-top-bar {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -342,7 +352,7 @@
         }
 
         /* 4. Left Sidebar with Dynamic Expansion */
-        #sc-spotify-left-bar {
+        #lc-left-bar {
             position: fixed !important;
             top: calc(var(--sc-bar-h) + 16px) !important;
             left: 12px !important;
@@ -366,11 +376,11 @@
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #sc-spotify-left-bar::-webkit-scrollbar {
+        #lc-left-bar::-webkit-scrollbar {
             display: none;
         }
 
-        #sc-spotify-left-bar.expanded {
+        #lc-left-bar.expanded {
             width: 300px;
         }
 
@@ -390,7 +400,7 @@
             overflow: hidden;
         }
 
-        #sc-spotify-left-bar.expanded .sc-sidebar-row {
+        #lc-left-bar.expanded .sc-sidebar-row {
             width: calc(100% - 16px);
             margin: 0 8px;
         }
@@ -420,7 +430,7 @@
             padding-right: 8px;
         }
 
-        #sc-spotify-left-bar.expanded .sc-sidebar-text-wrap {
+        #lc-left-bar.expanded .sc-sidebar-text-wrap {
             opacity: 1;
             pointer-events: auto;
         }
@@ -447,7 +457,7 @@
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #sc-spotify-left-bar.expanded .sc-sidebar-divider {
+        #lc-left-bar.expanded .sc-sidebar-divider {
             width: calc(100% - 32px);
             margin: 4px 16px;
         }
@@ -3005,21 +3015,21 @@
             white-space: nowrap;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-head {
+        #lc-left-bar.expanded .sc-lib-head {
             flex-direction: row;
             justify-content: space-between;
             padding: 6px 12px 6px 8px;
             box-sizing: border-box;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-toggle {
+        #lc-left-bar.expanded .sc-lib-toggle {
             width: auto;
             height: 44px;
             padding: 0 10px;
             color: #ffffff;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-toggle span {
+        #lc-left-bar.expanded .sc-lib-toggle span {
             display: inline;
             font-size: 18px;
             font-weight: 700 !important;
@@ -3027,7 +3037,7 @@
             color: #ffffff;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-create {
+        #lc-left-bar.expanded .sc-lib-create {
             width: auto;
             height: 32px;
             padding: 0 14px 0 10px;
@@ -3037,18 +3047,18 @@
             color: #ffffff;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-create:hover {
+        #lc-left-bar.expanded .sc-lib-create:hover {
             background: rgba(255, 255, 255, 0.14);
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-create span {
+        #lc-left-bar.expanded .sc-lib-create span {
             display: inline;
             font-size: 13px;
             font-weight: 700 !important;
             color: #ffffff;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-create svg {
+        #lc-left-bar.expanded .sc-lib-create svg {
             width: 18px;
             height: 18px;
         }
@@ -3060,7 +3070,7 @@
             flex-shrink: 0;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-chips {
+        #lc-left-bar.expanded .sc-lib-chips {
             display: flex;
         }
 
@@ -3079,13 +3089,13 @@
             background: rgba(255, 255, 255, 0.14);
         }
 
-        #sc-spotify-left-bar[data-filter="playlist"] .sc-lib-chips button[data-filter="playlist"],
-        #sc-spotify-left-bar[data-filter="artist"] .sc-lib-chips button[data-filter="artist"] {
+        #lc-left-bar[data-filter="playlist"] .sc-lib-chips button[data-filter="playlist"],
+        #lc-left-bar[data-filter="artist"] .sc-lib-chips button[data-filter="artist"] {
             background: var(--sc-accent);
         }
 
-        #sc-spotify-left-bar[data-filter="playlist"] .sc-sidebar-row[data-type="artist"],
-        #sc-spotify-left-bar[data-filter="artist"] .sc-sidebar-row[data-type="playlist"] {
+        #lc-left-bar[data-filter="playlist"] .sc-sidebar-row[data-type="artist"],
+        #lc-left-bar[data-filter="artist"] .sc-sidebar-row[data-type="playlist"] {
             display: none;
         }
 
@@ -4895,7 +4905,7 @@
             margin: 0 15px;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-head {
+        #lc-left-bar.expanded .sc-lib-head {
             flex-direction: row;
             align-items: center;
             justify-content: space-between;
@@ -4904,7 +4914,7 @@
             padding: 0 12px 0 8px;
         }
 
-        #sc-spotify-left-bar.expanded .sc-lib-toggle {
+        #lc-left-bar.expanded .sc-lib-toggle {
             width: auto;
             height: 56px;
             padding: 0 10px 0 0;
@@ -4950,7 +4960,7 @@
         }
 
         /* "Your Library" hover highlight: same space after the text as before the icon */
-        #sc-spotify-left-bar.expanded .sc-lib-toggle {
+        #lc-left-bar.expanded .sc-lib-toggle {
             padding: 0 15px 0 0;
         }
 
@@ -5020,7 +5030,7 @@
             --sc-bar-h: 46px;
         }
 
-        html.sc-app #sc-spotify-top-bar {
+        html.sc-app #lc-top-bar {
             padding: 0 0 0 12px !important;
             app-region: drag;
             box-shadow: none !important;
@@ -5031,9 +5041,9 @@
             margin-left: auto !important;
         }
 
-        html.sc-app #sc-spotify-top-bar a,
-        html.sc-app #sc-spotify-top-bar button,
-        html.sc-app #sc-spotify-top-bar input,
+        html.sc-app #lc-top-bar a,
+        html.sc-app #lc-top-bar button,
+        html.sc-app #lc-top-bar input,
         html.sc-app .sc-top-search-wrap {
             app-region: no-drag;
         }
@@ -5753,7 +5763,7 @@
 
         /* 31. Appearance settings (Settings > Appearance write these variables on <html>) */
         .l-container:not(.playControls__wrapper),
-        #sc-spotify-left-bar,
+        #lc-left-bar,
         #sc-lyrics {
             background: rgba(18, 18, 18, var(--sc-panel-alpha, 0.75)) !important;
             backdrop-filter: blur(calc(var(--sc-panel-blur, 30) * 1px)) !important;
@@ -6690,7 +6700,7 @@
 
     /* ---------- Dynamic background ---------- */
     const bg = document.createElement('div');
-    bg.id = 'sc-spotify-dynamic-bg';
+    bg.id = 'lc-dynamic-bg';
     Object.assign(bg.style, {
         position: 'fixed',
         top: '-10%',
@@ -7184,10 +7194,10 @@
        id, so each song has to be matched to one first (see resolveSpotifyId). Without a key, or when a song
        is not found, lyrics come from LRCLIB as before. */
     const lyricKeys = (() => {
-        try { return { spicy: String(JSON.parse(localStorage.getItem('sc-spotify-lyrics-keys') || '{}').spicy || '') }; }
+        try { return { spicy: String(JSON.parse(localStorage.getItem('sc-lc-lyrics-keys') || '{}').spicy || '') }; }
         catch (e) { return { spicy: '' }; }
     })();
-    const saveLyricKeys = () => { try { localStorage.setItem('sc-spotify-lyrics-keys', JSON.stringify(lyricKeys)); } catch (e) {} };
+    const saveLyricKeys = () => { try { localStorage.setItem('sc-lc-lyrics-keys', JSON.stringify(lyricKeys)); } catch (e) {} };
     let lyricSourceStatus = ''; // last thing that happened with the Spicy Lyrics lookup, shown in settings
 
     const spicyToLyrics = (body) => {
@@ -7227,10 +7237,10 @@
     // Spotify track ids we already know, per song: pasted by hand, or found automatically.
     // key "artist|title" -> { id, source: 'manual' | 'musicbrainz' | 'listenbrainz' | 'apple' }
     const spotifyIds = (() => {
-        try { return JSON.parse(localStorage.getItem('sc-spotify-track-ids') || '{}') || {}; }
+        try { return JSON.parse(localStorage.getItem('sc-lc-track-ids') || '{}') || {}; }
         catch (e) { return {}; }
     })();
-    const saveSpotifyIds = () => { try { localStorage.setItem('sc-spotify-track-ids', JSON.stringify(spotifyIds)); } catch (e) {} };
+    const saveSpotifyIds = () => { try { localStorage.setItem('sc-lc-track-ids', JSON.stringify(spotifyIds)); } catch (e) {} };
     const spotifyLookups = new Map(); // songs already looked up this session: key -> { ids, source } | null
 
     // accepts https://open.spotify.com/track/<id>?..., spotify:track:<id>, or a bare 22-character id
@@ -7516,7 +7526,7 @@
         const settings = {};
         LYF_OPTIONS.forEach((o) => { settings[o.key] = o.def; });
         try {
-            const saved = JSON.parse(localStorage.getItem('sc-spotify-lyrics-full') || '{}');
+            const saved = JSON.parse(localStorage.getItem('sc-lc-settings') || '{}');
             if (typeof saved.brightness === 'number' && saved.brightness <= 1) saved.brightness = Math.round(saved.brightness * 100); // older format
             if (saved.blur === false && saved.blurAmount === undefined) saved.blurAmount = 0; // blur used to be an on/off switch
             LYF_OPTIONS.forEach((o) => { if (typeof saved[o.key] === typeof o.def) settings[o.key] = saved[o.key]; });
@@ -7531,10 +7541,10 @@
     const lyricTiming = (() => {
         const timing = { all: 0, songs: {} }; // songs: key -> { title, artist, art, offset }
         try {
-            Object.assign(timing, JSON.parse(localStorage.getItem('sc-spotify-lyrics-timing') || '{}'));
+            Object.assign(timing, JSON.parse(localStorage.getItem('sc-lc-lyrics-timing') || '{}'));
             // older format: one flat map of key -> seconds, with "*" for every song
             const old = JSON.parse(localStorage.getItem('sc-spotify-lyrics-offsets') || 'null');
-            if (old && !localStorage.getItem('sc-spotify-lyrics-timing')) {
+            if (old && !localStorage.getItem('sc-lc-lyrics-timing')) {
                 Object.keys(old).forEach((key) => {
                     if (key === '*') timing.all = Number(old[key]) || 0;
                     else { const [artist, title] = key.split('|'); timing.songs[key] = { title: title || key, artist: artist || '', art: '', offset: Number(old[key]) || 0 }; }
@@ -7545,7 +7555,7 @@
         return timing;
     })();
     const saveLyricTiming = () => {
-        try { localStorage.setItem('sc-spotify-lyrics-timing', JSON.stringify(lyricTiming)); } catch (e) {}
+        try { localStorage.setItem('sc-lc-lyrics-timing', JSON.stringify(lyricTiming)); } catch (e) {}
         lyrics.active = -2; // re-evaluate the highlighted line straight away
     };
 
@@ -7706,7 +7716,7 @@
             full.dataset.nolyrics = lyfSettings.centerNoLyrics && lyfSettings.art && noLyricsFound() ? 'on' : 'off';
             placeLyfVolume(full);
         }
-        try { localStorage.setItem('sc-spotify-lyrics-full', JSON.stringify(lyfSettings)); } catch (e) {}
+        try { localStorage.setItem('sc-lc-settings', JSON.stringify(lyfSettings)); } catch (e) {}
     };
 
     const SETTINGS_TAB_NAMES = { 'Appearance': 'Appearance', 'Layout': 'Layout', 'Title and artist': 'Text', 'Background': 'Background', 'Controls': 'Controls' };
@@ -9500,7 +9510,7 @@
         }
 
         /* top bar: your picture on the left, notifications and settings on the right */
-        html.sc-phone #sc-spotify-top-bar {
+        html.sc-phone #lc-top-bar {
             padding: env(safe-area-inset-top) 12px 0 12px !important;
             background: #121212 !important;
             border-bottom: none !important;
@@ -9509,11 +9519,11 @@
             -webkit-backdrop-filter: none !important;
         }
 
-        html.sc-phone #sc-spotify-top-bar .sc-top-logo,
-        html.sc-phone #sc-spotify-top-bar .sc-top-profile-name,
-        html.sc-phone #sc-spotify-top-bar [data-act="import"],
-        html.sc-phone #sc-spotify-top-bar a[href="/upload"],
-        html.sc-phone #sc-spotify-top-bar a[href="/you/library"],
+        html.sc-phone #lc-top-bar .sc-top-logo,
+        html.sc-phone #lc-top-bar .sc-top-profile-name,
+        html.sc-phone #lc-top-bar [data-act="import"],
+        html.sc-phone #lc-top-bar a[href="/upload"],
+        html.sc-phone #lc-top-bar a[href="/you/library"],
         html.sc-phone .sc-win-controls,
         html.sc-phone #sc-lyrics,
         html.sc-phone .tileGallery__sliderButton {
@@ -9526,7 +9536,7 @@
         }
 
         /* the search box sits in the top bar, between your picture and the icons */
-        html.sc-phone #sc-spotify-top-bar .sc-top-search-wrap {
+        html.sc-phone #lc-top-bar .sc-top-search-wrap {
             display: flex !important;
             position: static !important;
             transform: none !important;
@@ -9538,11 +9548,11 @@
             margin: 0 4px 0 10px !important;
         }
 
-        html.sc-phone #sc-spotify-top-bar .sc-top-search-wrap input {
+        html.sc-phone #lc-top-bar .sc-top-search-wrap input {
             min-width: 0 !important;
         }
 
-        html.sc-phone #sc-spotify-top-bar .sc-top-nav-right {
+        html.sc-phone #lc-top-bar .sc-top-nav-right {
             flex: 0 0 auto !important;
             gap: 0 !important;
         }
@@ -9903,11 +9913,11 @@
 
         /* Your Library tab: the library panel as a screen of its own (under the page layer, which is emptied
            while it shows, so the mini player stays on top) */
-        html.sc-phone #sc-spotify-left-bar {
+        html.sc-phone #lc-left-bar {
             display: none !important;
         }
 
-        html.sc-phone.sc-phone-library #sc-spotify-left-bar {
+        html.sc-phone.sc-phone-library #lc-left-bar {
             display: flex !important;
             top: var(--sc-bar-h) !important;
             left: 0 !important;
@@ -9933,29 +9943,29 @@
             visibility: hidden !important; /* not display: none, so the page keeps its scroll position */
         }
 
-        html.sc-phone #sc-spotify-left-bar .sc-sidebar-row {
+        html.sc-phone #lc-left-bar .sc-sidebar-row {
             padding: 6px 8px !important;
             gap: 12px !important;
         }
 
-        html.sc-phone #sc-spotify-left-bar .sc-sidebar-icon-box,
-        html.sc-phone #sc-spotify-left-bar .sc-sidebar-thumb,
-        html.sc-phone #sc-spotify-left-bar .sc-sidebar-liked-box {
+        html.sc-phone #lc-left-bar .sc-sidebar-icon-box,
+        html.sc-phone #lc-left-bar .sc-sidebar-thumb,
+        html.sc-phone #lc-left-bar .sc-sidebar-liked-box {
             width: 64px !important;
             height: 64px !important;
             min-width: 64px !important;
             border-radius: 6px;
         }
 
-        html.sc-phone #sc-spotify-left-bar .sc-sidebar-thumb.circle {
+        html.sc-phone #lc-left-bar .sc-sidebar-thumb.circle {
             border-radius: 50% !important;
         }
 
-        html.sc-phone #sc-spotify-left-bar .sc-sidebar-title {
+        html.sc-phone #lc-left-bar .sc-sidebar-title {
             font-size: 16px !important;
         }
 
-        html.sc-phone #sc-spotify-left-bar .sc-sidebar-item-sub {
+        html.sc-phone #lc-left-bar .sc-sidebar-item-sub {
             font-size: 13px !important;
         }
 
@@ -10259,7 +10269,7 @@
 
     const setupPhone = () => {
         if (!PHONE) return;
-        const leftBar = document.getElementById('sc-spotify-left-bar');
+        const leftBar = document.getElementById('lc-left-bar');
         if (leftBar) leftBar.classList.add('expanded'); // the library screen always shows names and filters
         // a new page closes the library screen, and the search box unless it is the search results
         if (location.pathname !== phonePath) {
@@ -10322,9 +10332,9 @@
             el.style.setProperty('display', 'none', 'important');
         });
 
-        if (!document.getElementById('sc-spotify-top-bar')) {
+        if (!document.getElementById('lc-top-bar')) {
             const topBar = document.createElement('div');
-            topBar.id = 'sc-spotify-top-bar';
+            topBar.id = 'lc-top-bar';
             topBar.innerHTML = `
                 <div class="sc-top-left">
                     <a href="/discover" class="sc-top-logo" title="Home">
@@ -10377,9 +10387,9 @@
             });
         }
 
-        if (!document.getElementById('sc-spotify-left-bar')) {
+        if (!document.getElementById('lc-left-bar')) {
             const leftBar = document.createElement('div');
-            leftBar.id = 'sc-spotify-left-bar';
+            leftBar.id = 'lc-left-bar';
             leftBar.innerHTML = `
                 <div class="sc-lib-head">
                     <button type="button" class="sc-lib-toggle" id="sc-lib-toggle-row" title="Your Library">
