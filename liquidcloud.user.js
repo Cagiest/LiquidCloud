@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      7.6
+// @version      7.7
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -8695,7 +8695,8 @@
                         const bump = Math.abs(u) >= 1 ? 0 : (1 + Math.cos(Math.PI * u)) / 2;
                         const scale = 1 + 0.06 * bump;
                         const lift = -3.4 * bump;
-                        const glow = bump;
+                        // sung letters keep a soft glow; the one under the sweep glows brightest
+                        const glow = Math.max(bump, progress >= 1 ? 0.3 : progress * 0.3);
                         const key = `${Math.round(progress * 100)}|${Math.round(scale * 1000)}|${Math.round(lift * 50)}|${Math.round(glow * 100)}`;
                         if (letter.shown === key) return;
                         letter.shown = key;
