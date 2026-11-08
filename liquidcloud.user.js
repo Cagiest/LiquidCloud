@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      7.4
+// @version      7.5
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -5943,8 +5943,8 @@
         /* 35. Lyrics typography + sung-word sweep.
                Font: SF Pro Display (when it is installed), set as plain running text so its own
                kerning and spacing apply. Inter is only a fallback for computers without SF Pro.
-               Words are never split into per-letter boxes: that switches kerning off and changes how the
-               typeface looks. The sweep is a gradient moving across each word instead. */
+               Each letter is its own span so it can light up and lift in turn, but the spans stay inline
+               (plain running text), never boxes: boxes switch kerning off and change how the typeface looks. */
         #sc-lyrics .sc-ly-line,
         #sc-lyrics .sc-ly-line *,
         #sc-ly-full .sc-ly-line,
@@ -5994,7 +5994,7 @@
 
         /* active line: each word is filled by a white-to-dim gradient whose edge sits at --p, with a soft
            18% blend so the light glides through the letters instead of jumping between them */
-        .sc-ly-line.sc-active .sc-w {
+        .sc-ly-line.sc-active .sc-l {
             color: transparent;
             -webkit-text-fill-color: transparent;
             background-image: linear-gradient(90deg, #ffffff calc(var(--p) * 1.18% - 18%), rgba(255, 255, 255, 0.42) calc(var(--p) * 1.18%));
@@ -6088,19 +6088,22 @@
             background: var(--sc-accent);
         }
 
-        /* 38. Lyric motion. Words are positioned every frame by animateLyricWords() through
-               --p (gradient fill 0-100), --s (scale), --y (lift in px) and --g (glow 0-1), so there are
-               no CSS transitions on them: transitions would lag behind and fight the per-frame values. */
-        .sc-ly-line .sc-w {
+        /* 38. Lyric motion. Letters are moved every frame by animateLyricWords() through
+               --p (gradient fill 0-100), --y (lift in px) and --g (glow 0-1), so there are no CSS
+               transitions on them: transitions would lag behind and fight the per-frame values.
+               Inline letters can't be scaled, so they lift by relative position. */
+        .sc-ly-line .sc-w,
+        .sc-ly-line .sc-l {
             transition: none !important;
         }
 
-        .sc-ly-line.sc-active .sc-w,
-        .sc-ly-line.sc-active .sc-w.sc-lit,
-        .sc-ly-line.sc-active .sc-w.sc-live {
-            transform: translateY(calc(var(--y, 0) * 1px)) scale(var(--s, 1));
+        .sc-ly-line .sc-l {
+            position: relative;
+            top: calc(var(--y, 0) * 1px);
+        }
+
+        .sc-ly-line.sc-active .sc-l {
             filter: drop-shadow(0 0 calc(var(--g, 0) * var(--sc-ly-glow, 50) * 0.26px) rgba(255, 255, 255, calc(var(--g, 0) * var(--sc-ly-glow, 50) / 95)));
-            will-change: transform, filter;
         }
 
         /* lines: the one being sung is full size and sharp; the rest sit slightly smaller and blur a
@@ -7441,8 +7444,15 @@
                     }
                     const span = document.createElement('span');
                     span.className = 'sc-w';
-                    span.textContent = word.text;
-                    el._words.push({ span, shown: -1 });
+                    // one inline span per letter, so each lights up and lifts in turn
+                    const letters = Array.from(word.text || '').map((ch) => {
+                        const l = document.createElement('span');
+                        l.className = 'sc-l';
+                        l.textContent = ch;
+                        span.appendChild(l);
+                        return { el: l, shown: '' };
+                    });
+                    el._words.push({ span, letters });
                     const prev = line.words[n - 1];
                     const continues = prev && prev.glue && (prev.bg || 0) === group;
                     if (word.glue || continues) {
@@ -8647,28 +8657,32 @@
                 if (!el || !el._words || !words) return;
                 el._words.forEach((entry, w) => {
                     const word = words[w];
-                    if (!word) return;
-                    const length = Math.max(0.08, word.e - word.t);
-                    const progress = Math.min(1, Math.max(0, (time - word.t) / length));
-                    const since = time - word.e; // seconds since the word finished (negative before that)
-                    let scale, lift, glow;
-                    if (time < word.t) { scale = 0.965; lift = 0.6; glow = 0; }              // waiting: slightly small and low
-                    else if (since <= 0) {                                                   // being sung: rises to its peak
-                        const k = easeOut(progress);
-                        scale = 0.965 + 0.075 * k; lift = 0.6 - 3.2 * k; glow = 0.25 + 0.75 * k;
-                    } else {                                                                 // done: settles over ~0.7s
-                        const k = Math.min(1, since / 0.7);
-                        const back = easeOut(k);
-                        scale = 1.04 - 0.04 * back; lift = -2.6 + 2.6 * back; glow = 1 - 0.8 * back;
-                    }
-                    const key = `${Math.round(progress * 1000)}|${Math.round(scale * 1000)}|${Math.round(glow * 100)}`;
-                    if (entry.shown === key) return;
-                    entry.shown = key;
-                    const style = entry.span.style;
-                    style.setProperty('--p', (progress * 100).toFixed(1));
-                    style.setProperty('--s', scale.toFixed(4));
-                    style.setProperty('--y', lift.toFixed(2));
-                    style.setProperty('--g', glow.toFixed(3));
+                    if (!word || !entry.letters.length) return;
+                    // the word's time shared out over its letters; each letter's lift lasts a little longer
+                    // than its share, so neighbours rise together in a wave rather than one by one
+                    const share = Math.max(0.02, (word.e - word.t) / entry.letters.length);
+                    entry.letters.forEach((letter, n) => {
+                        const start = word.t + share * n;
+                        const progress = Math.min(1, Math.max(0, (time - start) / share));
+                        const rise = Math.min(1, Math.max(0, (time - start) / Math.max(share, 0.22)));
+                        const since = time - Math.max(start + share, start + 0.22);
+                        let lift, glow;
+                        if (time < start) { lift = 0.6; glow = 0; }                          // waiting: slightly low
+                        else if (since <= 0) {                                               // being sung: rises
+                            const k = easeOut(rise);
+                            lift = 0.6 - 3.2 * k; glow = 0.25 + 0.75 * k;
+                        } else {                                                             // done: settles over ~0.7s
+                            const back = easeOut(Math.min(1, since / 0.7));
+                            lift = -2.6 + 2.6 * back; glow = 1 - 0.8 * back;
+                        }
+                        const key = `${Math.round(progress * 100)}|${Math.round(lift * 50)}|${Math.round(glow * 100)}`;
+                        if (letter.shown === key) return;
+                        letter.shown = key;
+                        const style = letter.el.style;
+                        style.setProperty('--p', (progress * 100).toFixed(1));
+                        style.setProperty('--y', lift.toFixed(2));
+                        style.setProperty('--g', glow.toFixed(3));
+                    });
                 });
             });
         });
