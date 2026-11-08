@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      7.5
+// @version      7.6
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -5943,8 +5943,9 @@
         /* 35. Lyrics typography + sung-word sweep.
                Font: SF Pro Display (when it is installed), set as plain running text so its own
                kerning and spacing apply. Inter is only a fallback for computers without SF Pro.
-               Each letter is its own span so it can light up and lift in turn, but the spans stay inline
-               (plain running text), never boxes: boxes switch kerning off and change how the typeface looks. */
+               Each letter is its own span so it can light up and lift in turn. Letters as boxes would switch
+               kerning off, so fitLyricLetters() measures their kerned places as plain text first and gives each
+               box a margin that puts it back there. */
         #sc-lyrics .sc-ly-line,
         #sc-lyrics .sc-ly-line *,
         #sc-ly-full .sc-ly-line,
@@ -6091,15 +6092,16 @@
         /* 38. Lyric motion. Letters are moved every frame by animateLyricWords() through
                --p (gradient fill 0-100), --y (lift in px) and --g (glow 0-1), so there are no CSS
                transitions on them: transitions would lag behind and fight the per-frame values.
-               Inline letters can't be scaled, so they lift by relative position. */
+               --s (scale) as well. */
         .sc-ly-line .sc-w,
         .sc-ly-line .sc-l {
             transition: none !important;
         }
 
-        .sc-ly-line .sc-l {
-            position: relative;
-            top: calc(var(--y, 0) * 1px);
+        .sc-ly-scroll.sc-fitted .sc-ly-line .sc-l {
+            display: inline-block;
+            transform: translateY(calc(var(--y, 0) * 1px)) scale(var(--s, 1));
+            transform-origin: 50% 85%;
         }
 
         .sc-ly-line.sc-active .sc-l {
@@ -8630,6 +8632,28 @@
     let lyricFrameAt = 0;
     const easeOut = (x) => 1 - (1 - x) * (1 - x);
 
+    // Letters as boxes move smoothly but lose the font's kerning, so their kerned places are measured as
+    // plain inline text and each box gets a margin (in em, right at any size) that puts it back there.
+    // Done when the lyrics are visible and again whenever the font or weight changes.
+    const fitLyricLetters = (scroll) => {
+        const first = scroll.querySelector('.sc-w');
+        if (!first || !first.getBoundingClientRect().width) return;
+        const cs = getComputedStyle(first);
+        const key = `${cs.fontFamily}|${cs.fontWeight}|${document.fonts ? document.fonts.status : ''}`;
+        if (scroll._fitKey === key) return;
+        scroll._fitKey = key;
+        scroll.classList.remove('sc-fitted');
+        const words = [...scroll.querySelectorAll('.sc-w')];
+        const inline = words.map(w => [...w.children].map(l => l.getBoundingClientRect().width));
+        const sizes = words.map(w => parseFloat(getComputedStyle(w).fontSize) || 1);
+        scroll.classList.add('sc-fitted');
+        const boxed = words.map(w => [...w.children].map(l => l.getBoundingClientRect().width));
+        words.forEach((w, i) => [...w.children].forEach((l, k) => {
+            const gap = (inline[i][k] - boxed[i][k]) / sizes[i];
+            l.style.marginRight = Math.abs(gap) > 0.0005 ? `${gap.toFixed(4)}em` : '';
+        }));
+    };
+
     const animateLyricWords = (now) => {
         requestAnimationFrame(animateLyricWords);
         const dt = Math.min(0.1, (now - lyricFrameAt) / 1000) || 0;
@@ -8650,6 +8674,7 @@
         lyricsTargets().forEach(({ box }) => {
             const scroll = box.querySelector('.sc-ly-scroll');
             if (!scroll) return;
+            fitLyricLetters(scroll);
             const els = scroll.querySelectorAll('.sc-ly-line');
             active.forEach((i) => {
                 const el = els[i];
@@ -8658,28 +8683,25 @@
                 el._words.forEach((entry, w) => {
                     const word = words[w];
                     if (!word || !entry.letters.length) return;
-                    // the word's time shared out over its letters; each letter's lift lasts a little longer
-                    // than its share, so neighbours rise together in a wave rather than one by one
-                    const share = Math.max(0.02, (word.e - word.t) / entry.letters.length);
+                    // Each letter rises as the sweep reaches it and settles as the sweep leaves: a smooth bump
+                    // centred on the moment the sweep is in the middle of the letter, as wide as the time the
+                    // sweep takes to cross about two letters (never under ~0.12 s, so fast words don't flicker).
+                    const share = Math.max(0.01, (word.e - word.t) / entry.letters.length);
+                    const half = Math.max(1.1 * share, 0.12);
                     entry.letters.forEach((letter, n) => {
                         const start = word.t + share * n;
                         const progress = Math.min(1, Math.max(0, (time - start) / share));
-                        const rise = Math.min(1, Math.max(0, (time - start) / Math.max(share, 0.22)));
-                        const since = time - Math.max(start + share, start + 0.22);
-                        let lift, glow;
-                        if (time < start) { lift = 0.6; glow = 0; }                          // waiting: slightly low
-                        else if (since <= 0) {                                               // being sung: rises
-                            const k = easeOut(rise);
-                            lift = 0.6 - 3.2 * k; glow = 0.25 + 0.75 * k;
-                        } else {                                                             // done: settles over ~0.7s
-                            const back = easeOut(Math.min(1, since / 0.7));
-                            lift = -2.6 + 2.6 * back; glow = 1 - 0.8 * back;
-                        }
-                        const key = `${Math.round(progress * 100)}|${Math.round(lift * 50)}|${Math.round(glow * 100)}`;
+                        const u = (time - (start + share / 2)) / half;
+                        const bump = Math.abs(u) >= 1 ? 0 : (1 + Math.cos(Math.PI * u)) / 2;
+                        const scale = 1 + 0.06 * bump;
+                        const lift = -3.4 * bump;
+                        const glow = bump;
+                        const key = `${Math.round(progress * 100)}|${Math.round(scale * 1000)}|${Math.round(lift * 50)}|${Math.round(glow * 100)}`;
                         if (letter.shown === key) return;
                         letter.shown = key;
                         const style = letter.el.style;
                         style.setProperty('--p', (progress * 100).toFixed(1));
+                        style.setProperty('--s', scale.toFixed(4));
                         style.setProperty('--y', lift.toFixed(2));
                         style.setProperty('--g', glow.toFixed(3));
                     });
