@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      7.7
+// @version      7.8
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -6104,6 +6104,12 @@
             transform-origin: 50% 85%;
         }
 
+        /* word-by-word bounce: the whole word lifts and grows (--wy, --ws) */
+        .sc-ly-line.sc-active .sc-w {
+            transform: translateY(calc(var(--wy, 0) * 1px)) scale(var(--ws, 1));
+            transform-origin: 50% 85%;
+        }
+
         .sc-ly-line.sc-active .sc-l {
             filter: drop-shadow(0 0 calc(var(--g, 0) * var(--sc-ly-glow, 50) * 0.26px) rgba(255, 255, 255, calc(var(--g, 0) * var(--sc-ly-glow, 50) / 95)));
         }
@@ -7502,6 +7508,12 @@
         { key: 'lyricWeight', type: 'range', label: 'Lyrics weight', def: 600, min: 400, max: 800, step: 100, cssVar: '--sc-ly-weight', scale: 1, root: true },
         // which side lyric lines are set from (and grow from), in the panel and in fullscreen
         { key: 'lyricAlign', type: 'seg', label: 'Lyrics alignment', def: 'center', attr: 'lyAlign', root: true, options: [['left', 'Left'], ['center', 'Middle'], ['right', 'Right']] },
+        // the bounce of the words being sung (read every frame by animateLyricWords)
+        { key: 'lyricMotion', type: 'seg', label: 'Lyrics bounce', def: 'letter', options: [['letter', 'Letter by letter'], ['word', 'Word by word']] },
+        { key: 'letterBounce', type: 'range', label: 'Letter bounce height', def: 100, min: 0, max: 200 },
+        { key: 'letterLength', type: 'range', label: 'Letter bounce length', def: 100, min: 40, max: 300 },
+        { key: 'wordBounce', type: 'range', label: 'Word bounce height', def: 100, min: 0, max: 200 },
+        { key: 'wordLength', type: 'range', label: 'Word bounce length', def: 100, min: 40, max: 300 },
         { section: 'Layout' },
         { key: 'art', type: 'switch', label: 'Show cover art', def: true },
         { key: 'lyrics', type: 'switch', label: 'Show lyrics', def: true },
@@ -8683,20 +8695,43 @@
                 el._words.forEach((entry, w) => {
                     const word = words[w];
                     if (!word || !entry.letters.length) return;
-                    // Each letter rises as the sweep reaches it and settles as the sweep leaves: a smooth bump
-                    // centred on the moment the sweep is in the middle of the letter, as wide as the time the
-                    // sweep takes to cross about two letters (never under ~0.12 s, so fast words don't flicker).
+                    // The bounce, by letter or by word (settings: style, and for each style a height and a length).
+                    // Letter: each letter rises as the sweep reaches it and settles as the sweep leaves, a smooth bump centred
+                    // on the sweep crossing it, as wide as the sweep takes to cross about two letters (times the length).
+                    // Word: the whole word rises while it's sung and settles after it (over 0.7 s times the length).
+                    const byWord = lyfSettings.lyricMotion === 'word';
+                    const height = (byWord ? lyfSettings.wordBounce : lyfSettings.letterBounce) / 100;
+                    const stretch = (byWord ? lyfSettings.wordLength : lyfSettings.letterLength) / 100;
+                    let wordLift = 0, wordScale = 1, wordGlow = 0;
+                    if (byWord) {
+                        const p = Math.min(1, Math.max(0, (time - word.t) / Math.max(0.08, word.e - word.t)));
+                        const since = time - word.e;
+                        let s, y, g;
+                        if (time < word.t) { s = 0.965; y = 0.6; g = 0; }
+                        else if (since <= 0) { const k = easeOut(p); s = 0.965 + 0.075 * k; y = 0.6 - 3.2 * k; g = 0.25 + 0.75 * k; }
+                        else { const back = easeOut(Math.min(1, since / (0.7 * stretch))); s = 1.04 - 0.04 * back; y = -2.6 + 2.6 * back; g = 1 - 0.8 * back; }
+                        wordScale = 1 + (s - 1) * height; wordLift = y * height; wordGlow = g;
+                    }
+                    const wordKey = `${Math.round(wordScale * 1000)}|${Math.round(wordLift * 50)}`;
+                    if (entry.shown !== wordKey) {
+                        entry.shown = wordKey;
+                        entry.span.style.setProperty('--ws', wordScale.toFixed(4));
+                        entry.span.style.setProperty('--wy', wordLift.toFixed(2));
+                    }
                     const share = Math.max(0.01, (word.e - word.t) / entry.letters.length);
-                    const half = Math.max(1.1 * share, 0.12);
+                    const half = Math.max(1.1 * share, 0.12) * stretch;
                     entry.letters.forEach((letter, n) => {
                         const start = word.t + share * n;
                         const progress = Math.min(1, Math.max(0, (time - start) / share));
-                        const u = (time - (start + share / 2)) / half;
-                        const bump = Math.abs(u) >= 1 ? 0 : (1 + Math.cos(Math.PI * u)) / 2;
-                        const scale = 1 + 0.06 * bump;
-                        const lift = -3.4 * bump;
-                        // sung letters keep a soft glow; the one under the sweep glows brightest
-                        const glow = Math.max(bump, progress >= 1 ? 0.3 : progress * 0.3);
+                        let scale = 1, lift = 0, glow = wordGlow;
+                        if (!byWord) {
+                            const u = (time - (start + share / 2)) / half;
+                            const bump = Math.abs(u) >= 1 ? 0 : (1 + Math.cos(Math.PI * u)) / 2;
+                            scale = 1 + 0.06 * bump * height;
+                            lift = -3.4 * bump * height;
+                            // sung letters keep a soft glow; the one under the sweep glows brightest
+                            glow = Math.max(bump, progress >= 1 ? 0.3 : progress * 0.3);
+                        }
                         const key = `${Math.round(progress * 100)}|${Math.round(scale * 1000)}|${Math.round(lift * 50)}|${Math.round(glow * 100)}`;
                         if (letter.shown === key) return;
                         letter.shown = key;
