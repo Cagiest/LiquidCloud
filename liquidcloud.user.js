@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      8.0
+// @version      8.1
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -8635,11 +8635,7 @@
             onload: (res) => {
                 desktopLyrics.busy = false;
                 let ok = res.status === 200;
-                try {
-                    const reply = JSON.parse(res.responseText);
-                    desktopLyrics.appVer = reply.ver;
-                    if (reply.go) followTogether(reply.go);
-                } catch (e) { ok = false; }
+                try { desktopLyrics.appVer = JSON.parse(res.responseText).ver; } catch (e) { ok = false; }
                 desktopLyrics.next = Date.now() + (ok ? 200 : 5000);
             },
             onerror: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; },
@@ -8648,10 +8644,30 @@
     };
 
     /* ---------- Listen together ----------
-       When you've joined a friend's session in Pretzel's Lyrics Overlay and chose SoundCloud, the app's replies
-       carry the friend's song: { id, url or search, title, dur, pos, at, playing }. Find it (SoundCloud's own
-       search when there's no link), start it, then keep to the friend's position and play/pause. */
-    const together = { id: null, path: null, startedAt: 0, seekedAt: 0, toggledAt: 0, searching: false };
+       When you've joined a friend's session in Pretzel's Lyrics Overlay and chose SoundCloud, the app sends
+       the friend's song: { id, url or search, title, dur, pos, at, playing }. Find it (SoundCloud's own search
+       when there's no link), start it, then keep to the friend's position and play/pause.
+       It arrives on a request the app holds open (POST /together): a background tab's timers run once a minute
+       at most, but network replies arrive straight away, so this works with SoundCloud in a background tab. */
+    const together = { id: null, path: null, startedAt: 0, seekedAt: 0, toggledAt: 0, searching: false, have: '' };
+    const pollTogether = () => {
+        gmRequest({
+            method: 'POST',
+            url: 'http://127.0.0.1:8766/together',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({ tab: desktopLyrics.session, have: together.have }),
+            timeout: 35000,
+            onload: (res) => {
+                let reply = null;
+                try { reply = JSON.parse(res.responseText); } catch (e) {}
+                if (res.status !== 200) { setTimeout(pollTogether, 5000); return; } // an older app: check back later
+                if (reply && reply.go) { together.have = reply.have || ''; followTogether(reply.go); }
+                pollTogether();
+            },
+            onerror: () => setTimeout(pollTogether, 5000),   // the app isn't running
+            ontimeout: () => pollTogether()
+        });
+    };
     const plainText = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
     const followTogether = async (go) => {
         if (!go || !go.id) return;
@@ -8676,6 +8692,7 @@
         }
         if (!isCurrentTrack(together.path)) {
             if (Date.now() - together.startedAt > 12000) { together.startedAt = Date.now(); playTrack(together.path); }
+            else runPendingAutoplay(); // its own timer is slowed in a background tab: press play from here too
             return;
         }
         const np = nowPlaying();
@@ -10460,6 +10477,7 @@
     setTimeout(checkNotes, 4000);
     setInterval(checkNotes, 120000);
     setInterval(syncDesktopLyrics, 100);
+    pollTogether();
     requestAnimationFrame(animateLyricWords);
     }
 })();
