@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      7.8
+// @version      7.9
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -6166,6 +6166,19 @@
             transform-origin: 0 50%;
         }
 
+        /* "Duet sides" off: the second singer's lines follow the alignment like the rest */
+        html[data-duet-sides="false"][data-ly-align="left"] #sc-lyrics .sc-ly-scroll .sc-ly-line.sc-ly-right,
+        html[data-duet-sides="false"][data-ly-align="left"] #sc-ly-full .sc-ly-scroll .sc-ly-line.sc-ly-right {
+            text-align: left;
+            transform-origin: 0 50%;
+        }
+
+        html[data-duet-sides="false"][data-ly-align="right"] #sc-lyrics .sc-ly-scroll .sc-ly-line.sc-ly-right,
+        html[data-duet-sides="false"][data-ly-align="right"] #sc-ly-full .sc-ly-scroll .sc-ly-line.sc-ly-right {
+            text-align: right;
+            transform-origin: 100% 50%;
+        }
+
         html[data-ly-align="center"] .sc-ly-note,
         html[data-ly-align="right"] .sc-ly-note {
             text-align: inherit;
@@ -7508,6 +7521,8 @@
         { key: 'lyricWeight', type: 'range', label: 'Lyrics weight', def: 600, min: 400, max: 800, step: 100, cssVar: '--sc-ly-weight', scale: 1, root: true },
         // which side lyric lines are set from (and grow from), in the panel and in fullscreen
         { key: 'lyricAlign', type: 'seg', label: 'Lyrics alignment', def: 'center', attr: 'lyAlign', root: true, options: [['left', 'Left'], ['center', 'Middle'], ['right', 'Right']] },
+        // duets: the second singer's lines on the other side; off = every line follows the alignment
+        { key: 'duetSides', type: 'switch', label: 'Duet sides (second singer on the other side)', def: true, attr: 'duetSides', root: true },
         // the bounce of the words being sung (read every frame by animateLyricWords)
         { key: 'lyricMotion', type: 'seg', label: 'Lyrics bounce', def: 'letter', options: [['letter', 'Letter by letter'], ['word', 'Word by word']] },
         { key: 'letterBounce', type: 'range', label: 'Letter bounce height', def: 100, min: 0, max: 200 },
