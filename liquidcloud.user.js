@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      7.9
+// @version      8.0
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -8635,12 +8635,62 @@
             onload: (res) => {
                 desktopLyrics.busy = false;
                 let ok = res.status === 200;
-                try { desktopLyrics.appVer = JSON.parse(res.responseText).ver; } catch (e) { ok = false; }
+                try {
+                    const reply = JSON.parse(res.responseText);
+                    desktopLyrics.appVer = reply.ver;
+                    if (reply.go) followTogether(reply.go);
+                } catch (e) { ok = false; }
                 desktopLyrics.next = Date.now() + (ok ? 200 : 5000);
             },
             onerror: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; },
             ontimeout: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; }
         });
+    };
+
+    /* ---------- Listen together ----------
+       When you've joined a friend's session in Pretzel's Lyrics Overlay and chose SoundCloud, the app's replies
+       carry the friend's song: { id, url or search, title, dur, pos, at, playing }. Find it (SoundCloud's own
+       search when there's no link), start it, then keep to the friend's position and play/pause. */
+    const together = { id: null, path: null, startedAt: 0, seekedAt: 0, toggledAt: 0, searching: false };
+    const plainText = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
+    const followTogether = async (go) => {
+        if (!go || !go.id) return;
+        if (together.id !== go.id) Object.assign(together, { id: go.id, path: null, startedAt: 0, seekedAt: 0 });
+        if (!together.path) {
+            if (go.url) together.path = new URL(go.url, location.origin).pathname;
+            else if (go.search && !together.searching) {
+                together.searching = true;
+                const id = go.id;
+                try {
+                    const res = await api(`/search/tracks?q=${encodeURIComponent(go.search)}&limit=10`);
+                    const want = plainText(go.title);
+                    const list = (res.collection || []).filter(t => t && t.permalink_url);
+                    const fits = t => !go.dur || !t.duration || Math.abs(t.duration / 1000 - go.dur) <= 8;
+                    const named = t => want && (plainText(t.title).includes(want) || want.includes(plainText(t.title)));
+                    const best = list.find(t => named(t) && fits(t)) || list.find(named);
+                    if (best && together.id === id) together.path = new URL(best.permalink_url).pathname;
+                } catch (e) {}
+                together.searching = false;
+            }
+            if (!together.path) return;
+        }
+        if (!isCurrentTrack(together.path)) {
+            if (Date.now() - together.startedAt > 12000) { together.startedAt = Date.now(); playTrack(together.path); }
+            return;
+        }
+        const np = nowPlaying();
+        if (!np) return;
+        const target = go.pos + (go.playing ? (Date.now() - go.at) / 1000 : 0);
+        const playing = !!document.querySelector('.playControls__play.playing');
+        if (go.playing !== playing && Date.now() - together.toggledAt > 2500) {
+            together.toggledAt = Date.now();
+            const button = document.querySelector('.playControls__play');
+            if (button) button.click();
+        }
+        if (go.playing && Math.abs(estimatePosition(np) - target) > 1.5 && Date.now() - together.seekedAt > 3000) {
+            together.seekedAt = Date.now();
+            seekTo(target + 0.25); // a little ahead: the jump itself takes a moment
+        }
     };
 
     // the playing song's cover, from the player bar's badge, at a size the overlay can show sharply
