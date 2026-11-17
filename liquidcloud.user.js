@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      8.1
+// @version      8.2
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -8606,7 +8606,8 @@
             desktopLyrics.sent = content;
             desktopLyrics.ver = `${desktopLyrics.session}:${++desktopLyrics.count}`;
         }
-        const state = { ver: desktopLyrics.ver, at: Date.now() };
+        const state = { ver: desktopLyrics.ver, at: Date.now(), hold: 200 };
+        const sentAt = Date.now();
         if (np && np.title) {
             Object.assign(state, {
                 title: cleanTitle(np.title),
@@ -8637,6 +8638,10 @@
                 let ok = res.status === 200;
                 try { desktopLyrics.appVer = JSON.parse(res.responseText).ver; } catch (e) { ok = false; }
                 desktopLyrics.next = Date.now() + (ok ? 200 : 5000);
+                // the app held the reply 200 ms: send the next one now, without a timer (a background tab's timers
+                // can run as rarely as once a minute; network replies arrive straight away). An older app answers
+                // at once, and then the timer paces it.
+                if (ok && Date.now() - sentAt >= 150) { desktopLyrics.next = 0; syncDesktopLyrics(); }
             },
             onerror: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; },
             ontimeout: () => { desktopLyrics.busy = false; desktopLyrics.appVer = null; desktopLyrics.next = Date.now() + 5000; }
