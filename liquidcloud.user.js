@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      8.3
+// @version      8.4
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -8517,7 +8517,15 @@
             if (lyrics.key !== '') { lyrics.key = ''; lyrics.lines = null; showLyrics('Play something to see its lyrics'); }
             return;
         }
-        const key = `${np.artist}|${np.title}|${np.duration}`;
+        // SoundCloud can report a song's length late (0 at first) or shift it by a second: still the same song,
+        // so its lyrics stay. Looking again with the new length could lose them (LRCLIB's versions that differ
+        // by more than 8 s are skipped), and Genius' plain text took the place of synced lyrics mid-song.
+        const song = `${np.artist}|${np.title}|`;
+        let key = song + np.duration;
+        if (lyrics.key && lyrics.key.startsWith(song)) {
+            const was = Number(lyrics.key.slice(song.length)) || 0;
+            if (!was || !np.duration || Math.abs(was - np.duration) <= 8) key = lyrics.key;
+        }
         if (key !== lyrics.key) {
             lyrics.key = key;
             lyrics.lines = null;
