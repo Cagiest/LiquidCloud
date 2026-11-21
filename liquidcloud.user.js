@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      8.2
+// @version      8.3
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -8953,8 +8953,10 @@
         const rect = native.getBoundingClientRect();
         const before = native.getAttribute('aria-valuenow');
         setTimeout(() => appLog(`volume: set ${level.toFixed(2)}, control at ${Math.round(rect.left)},${Math.round(rect.top)} ${Math.round(rect.width)}x${Math.round(rect.height)}, was ${before}, now ${native.getAttribute('aria-valuenow')}`), 50);
-        // measured: SoundCloud reads level = (distance from the wrapper's bottom - 9px) / 120px
-        const y = rect.bottom - (9 + 120 * Math.min(1, Math.max(0, level)));
+        // measured: SoundCloud reads level = (distance from the wrapper's bottom - 9px) / 120px. It measures the
+        // wrapper on screen but the pointer on the page, so the page's scroll is added (without it, any page
+        // scrolled down read as maximum volume)
+        const y = rect.bottom - (9 + 120 * Math.min(1, Math.max(0, level))) + (window.scrollY || 0);
         const x = rect.left + rect.width / 2;
         const fire = (el, type) => el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: 1 }));
         fire(native, 'mousedown');
