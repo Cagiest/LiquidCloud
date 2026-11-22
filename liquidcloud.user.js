@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      8.4
+// @version      8.5
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
 // @downloadURL  https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
 // @description  LiquidCloud: a new look for SoundCloud. Floating player bar with the progress under the controls, SF Pro font, a background coloured by the cover, and synced lyrics
 // @match        https://soundcloud.com/*
+// @match        https://open.spotify.com/*
 // @grant        GM_addStyle
 // @grant        unsafeWindow
 // @grant        GM_xmlhttpRequest
@@ -21,6 +22,51 @@
 
 (function() {
     'use strict';
+
+    /* On Spotify's web player LiquidCloud does one thing only: it tells Pretzel's Lyrics Overlay on this computer
+       which track is playing. Windows only gets the song's name from the browser, and finding the Spotify track
+       from a name can fail (a new release no lookup service knows yet), so the overlay couldn't ask Spicy Lyrics
+       for its word-by-word lyrics. Nothing on the page changes. */
+    if (location.hostname === 'open.spotify.com') {
+        const post = (data) => {
+            const details = { method: 'POST', url: 'http://127.0.0.1:8766/spotify', headers: { 'Content-Type': 'application/json' }, data: JSON.stringify(data), timeout: 3000 };
+            try {
+                if (typeof GM_xmlhttpRequest === 'function') GM_xmlhttpRequest(details);
+                else if (typeof GM !== 'undefined' && GM && typeof GM.xmlHttpRequest === 'function') GM.xmlHttpRequest(details);
+            } catch (e) {}
+        };
+        const playing = () => {
+            const widget = document.querySelector('[data-testid="now-playing-widget"]') || document.querySelector('footer, [data-testid="now-playing-bar"]');
+            if (!widget) return null;
+            for (const a of widget.querySelectorAll('a[href]')) {
+                const href = decodeURIComponent(a.getAttribute('href') || '');
+                const m = href.match(/spotify:track:([A-Za-z0-9]{22})/) || href.match(/\/track\/([A-Za-z0-9]{22})/);
+                if (!m) continue;
+                const label = widget.getAttribute('aria-label') || ''; // "Now playing: Title by Artist"
+                const named = label.match(/:\s*(.+?)\s+by\s+(.+)$/i);
+                const title = (widget.querySelector('[data-testid="context-item-info-title"]') || a).textContent.trim() || (named ? named[1] : '');
+                const artist = (widget.querySelector('[data-testid="context-item-info-subtitles"]') || {}).textContent || (named ? named[2] : '');
+                return { id: m[1], title, artist: String(artist).trim() };
+            }
+            return null;
+        };
+        let sent = '', sentAt = 0;
+        const check = () => {
+            const now = playing();
+            if (!now) return;
+            // when the track changes, and every 20 s (the overlay may have started later)
+            if (now.id !== sent || Date.now() - sentAt > 20000) { sent = now.id; sentAt = Date.now(); post(now); }
+        };
+        const begin = () => {
+            check();
+            // page changes call it straight away (a background tab's timers are slowed; these aren't)
+            new MutationObserver(check).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['href', 'aria-label'] });
+            setInterval(check, 2000);
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', begin, { once: true });
+        else begin();
+        return;
+    }
 
     // Settings saved under the script's old name (before 7.3) move to the LiquidCloud names once
     try {
