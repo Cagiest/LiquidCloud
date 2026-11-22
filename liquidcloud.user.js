@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LiquidCloud
 // @namespace    http://tampermonkey.net/
-// @version      8.5
+// @version      8.6
 // @homepageURL  https://github.com/Cagiest/LiquidCloud
 // @supportURL   https://github.com/Cagiest/LiquidCloud/issues
 // @updateURL    https://raw.githubusercontent.com/Cagiest/LiquidCloud/main/liquidcloud.user.js
@@ -8702,73 +8702,6 @@
         });
     };
 
-    /* ---------- Listen together ----------
-       When you've joined a friend's session in Pretzel's Lyrics Overlay and chose SoundCloud, the app sends
-       the friend's song: { id, url or search, title, dur, pos, at, playing }. Find it (SoundCloud's own search
-       when there's no link), start it, then keep to the friend's position and play/pause.
-       It arrives on a request the app holds open (POST /together): a background tab's timers run once a minute
-       at most, but network replies arrive straight away, so this works with SoundCloud in a background tab. */
-    const together = { id: null, path: null, startedAt: 0, seekedAt: 0, toggledAt: 0, searching: false, have: '' };
-    const pollTogether = () => {
-        gmRequest({
-            method: 'POST',
-            url: 'http://127.0.0.1:8766/together',
-            headers: { 'Content-Type': 'application/json' },
-            data: JSON.stringify({ tab: desktopLyrics.session, have: together.have }),
-            timeout: 35000,
-            onload: (res) => {
-                let reply = null;
-                try { reply = JSON.parse(res.responseText); } catch (e) {}
-                if (res.status !== 200) { setTimeout(pollTogether, 5000); return; } // an older app: check back later
-                if (reply && reply.go) { together.have = reply.have || ''; followTogether(reply.go); }
-                pollTogether();
-            },
-            onerror: () => setTimeout(pollTogether, 5000),   // the app isn't running
-            ontimeout: () => pollTogether()
-        });
-    };
-    const plainText = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
-    const followTogether = async (go) => {
-        if (!go || !go.id) return;
-        if (together.id !== go.id) Object.assign(together, { id: go.id, path: null, startedAt: 0, seekedAt: 0 });
-        if (!together.path) {
-            if (go.url) together.path = new URL(go.url, location.origin).pathname;
-            else if (go.search && !together.searching) {
-                together.searching = true;
-                const id = go.id;
-                try {
-                    const res = await api(`/search/tracks?q=${encodeURIComponent(go.search)}&limit=10`);
-                    const want = plainText(go.title);
-                    const list = (res.collection || []).filter(t => t && t.permalink_url);
-                    const fits = t => !go.dur || !t.duration || Math.abs(t.duration / 1000 - go.dur) <= 8;
-                    const named = t => want && (plainText(t.title).includes(want) || want.includes(plainText(t.title)));
-                    const best = list.find(t => named(t) && fits(t)) || list.find(named);
-                    if (best && together.id === id) together.path = new URL(best.permalink_url).pathname;
-                } catch (e) {}
-                together.searching = false;
-            }
-            if (!together.path) return;
-        }
-        if (!isCurrentTrack(together.path)) {
-            if (Date.now() - together.startedAt > 12000) { together.startedAt = Date.now(); playTrack(together.path); }
-            else runPendingAutoplay(); // its own timer is slowed in a background tab: press play from here too
-            return;
-        }
-        const np = nowPlaying();
-        if (!np) return;
-        const target = go.pos + (go.playing ? (Date.now() - go.at) / 1000 : 0);
-        const playing = !!document.querySelector('.playControls__play.playing');
-        if (go.playing !== playing && Date.now() - together.toggledAt > 2500) {
-            together.toggledAt = Date.now();
-            const button = document.querySelector('.playControls__play');
-            if (button) button.click();
-        }
-        if (go.playing && Math.abs(estimatePosition(np) - target) > 1.5 && Date.now() - together.seekedAt > 3000) {
-            together.seekedAt = Date.now();
-            seekTo(target + 0.25); // a little ahead: the jump itself takes a moment
-        }
-    };
-
     // the playing song's cover, from the player bar's badge, at a size the overlay can show sharply
     const playingCover = () => {
         const el = document.querySelector('.playControls__soundBadge .playbackSoundBadge__avatar span.sc-artwork');
@@ -10538,7 +10471,6 @@
     setTimeout(checkNotes, 4000);
     setInterval(checkNotes, 120000);
     setInterval(syncDesktopLyrics, 100);
-    pollTogether();
     requestAnimationFrame(animateLyricWords);
     }
 })();
