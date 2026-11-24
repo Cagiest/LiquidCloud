@@ -20,3 +20,14 @@ Optional: paste your own Spicy Lyrics key in the script's settings for word-by-w
 - `app/`: the Windows desktop app (WebView2), see `app/README.md`.
 - `ios/`: the iPhone app (SwiftUI), built by GitHub Actions.
 - `dev/`: the development loader and server used while working on the script.
+
+## Download
+
+Ready-to-run builds are on the [Releases](../../releases) page:
+
+- **LiquidCloud.exe**: the Windows desktop app. Portable, nothing to install.
+- **LiquidCloud.ipa**: the iPhone app, unsigned. Install it with Sideloadly or AltStore using your Apple ID.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
